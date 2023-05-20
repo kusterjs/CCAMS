@@ -707,6 +707,17 @@ void CCAMS::ReadSettings()
 				autoAssign = true;
 			}
 		}
+
+		int areaCount = 1;
+		while ((cstrSetting = GetDataFromSettings(("codeArea" + to_string(areaCount)).c_str())) != NULL)
+		{
+#ifdef _DEBUG
+			string DisplayMsg = "Code Area " + to_string(areaCount) + " found";
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", cstrSetting, true, false, false, false, false);
+#endif
+
+		}
 	}
 	catch (std::runtime_error const& e)
 	{
