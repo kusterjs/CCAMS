@@ -731,6 +731,22 @@ void CCAMS::ReadSettings()
 			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", cstrSetting, true, false, false, false, false);
 #endif
+			//DisplayMsg = "";
+			string s = cstrSetting;
+			size_t pos = 0;
+			std::string token;
+			int c = 0;
+			while ((pos = s.find(":", pos)) != std::string::npos) {
+				//token = s.substr(0, pos);
+				//std::cout << token << std::endl;
+				//s.erase(0, pos + 1);
+
+				c++;
+			}
+			DisplayMsg = to_string(c) + " delimiters found";
+#ifdef _DEBUG
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif // _DEBUG
 
 		}
 	}
