@@ -285,18 +285,33 @@ void CCAMS::OnFlightPlanFlightPlanDataUpdate(CFlightPlan FlightPlan)
 #ifdef _DEBUG
 	stringstream log;
 #endif
-	if (FlightPlan.GetTrackingControllerIsMe())
+	if (!HasValidSquawk(FlightPlan))
+	{
+		if (std::find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
+		{
+			ProcessedFlightPlans.erase(remove(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()), ProcessedFlightPlans.end());
+#ifdef _DEBUG
+			log << FlightPlan.GetCallsign() << ":FP removed from processed list:no valid squawk assigned";
+			writeLogFile(log);
+			DisplayMsg = string{ FlightPlan.GetCallsign() } + " removed from processed list because it has no valid squawk assigned";
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+		}
+	}
+	else if (FlightPlan.GetTrackingControllerIsMe())
 	{
 		if (autoAssign && pluginVersionCheck && ConnectionStatus > 10)
 		{
 #ifdef _DEBUG
+			log << FlightPlan.GetCallsign() << ":FP processed for automatic squawk assignment:flight plan update and controller is tracking";
+			writeLogFile(log);
 			string DisplayMsg = string{ FlightPlan.GetCallsign() } + " is processed for automatic squawk assignment (due to flight plan update and controller is tracking)";
 			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, true, false, false, false);
 #endif
 			AssignAutoSquawk(FlightPlan);
 		}
 	}
-	else if (std::find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
+	/*else if (std::find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
 	{
 		if (!(FlightPlan.GetFlightPlanData().IsReceived() && FlightPlan.GetSectorEntryMinutes() < 0) && !HasValidSquawk(FlightPlan))
 		{
@@ -308,7 +323,7 @@ void CCAMS::OnFlightPlanFlightPlanDataUpdate(CFlightPlan FlightPlan)
 			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 		}
-	}
+	}*/
 }
 
 void CCAMS::OnFlightPlanDisconnect(CFlightPlan FlightPlan)
