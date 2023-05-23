@@ -14,7 +14,7 @@ using namespace EuroScopePlugIn;
 
 #define MY_PLUGIN_NAME			"CCAMS"
 #ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.7.1 DEV"
+#define MY_PLUGIN_VERSION		"2.7.2 DEV"
 #else
 #define MY_PLUGIN_VERSION		"2.2.7"
 #endif
@@ -97,6 +97,7 @@ public:
 private:
 	future<string> fUpdateString;
 	vector<string> ProcessedFlightPlans;
+	map<const char*, vector<CPosition>> codeAreas;
 	regex ModeSAirports;
 	CFlightPlanList FpListEHS;
 	string EquipmentCodesFAA;

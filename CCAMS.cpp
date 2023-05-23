@@ -723,32 +723,85 @@ void CCAMS::ReadSettings()
 			}
 		}
 
+		string sSetting;
+		const char* squawk;
+		CPosition polygonVertex;
+		smatch coord;
+		vector<CPosition> codeArea;
 		int areaCount = 1;
 		while ((cstrSetting = GetDataFromSettings(("codeArea" + to_string(areaCount)).c_str())) != NULL)
 		{
+			sSetting = cstrSetting;
 #ifdef _DEBUG
 			string DisplayMsg = "Code Area " + to_string(areaCount) + " found";
 			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", cstrSetting, true, false, false, false, false);
 #endif
-			//DisplayMsg = "";
-			string s = cstrSetting;
-			size_t pos = 0;
-			std::string token;
-			int c = 0;
-			while ((pos = s.find(":", pos)) != std::string::npos) {
-				//token = s.substr(0, pos);
-				//std::cout << token << std::endl;
-				//s.erase(0, pos + 1);
-
-				c++;
+			if (sSetting.size() < 8)
+			{
+				DisplayUserMessage(MY_PLUGIN_NAME, "Setting Error", ("There is not enough data for 'codeArea" + to_string(areaCount) + "' (expected: squawk code, followed by a list of coordinates). This area will not be considered.").c_str(), true, false, false, false, false);
+				continue;
 			}
-			DisplayMsg = to_string(c) + " delimiters found";
-#ifdef _DEBUG
-			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif // _DEBUG
+			if (!regex_match(sSetting, std::regex("^[0-7]{4}:.+")))
+			{
+				DisplayUserMessage(MY_PLUGIN_NAME, "Setting Error", ("Parameter 1 of the setting 'codeArea" + to_string(areaCount) + "' is invalid (expected: 4 digit squawk code). This area will not be considered.").c_str(), true, false, false, false, false);
+				continue;
+			}
+			squawk = sSetting.substr(0, 4).c_str();
+			sSetting.erase(0, 5);
 
+
+			while (regex_search(sSetting, coord, regex("([NS]?[\\d\\.]+):([EW]?[\\d\\.]+)")))
+			{
+				//DisplayUserMessage(MY_PLUGIN_NAME, "Debug", (coord[1].str() + ", " + coord[2].str()).c_str(), true, false, false, false, false);
+				if (!polygonVertex.LoadFromStrings(coord[2].str().c_str(), coord[1].str().c_str()))
+				{
+					try
+					{
+						if (abs(stod(coord[1].str())) > 90)
+						{
+							// value too large
+							throw std::invalid_argument("Latitude value is too large");
+						}
+
+						if (abs(stod(coord[2].str())) > 180)
+						{
+							// value too large
+							throw std::invalid_argument("Longitude value is too large");
+						}
+						polygonVertex.m_Latitude = stod(coord[1].str());
+						polygonVertex.m_Longitude = stod(coord[2].str());
+
+					}
+					catch (std::invalid_argument const& ex)
+					{
+						// values are not double
+						DisplayUserMessage(MY_PLUGIN_NAME, "Setting Error", ("The coordinate pair " + coord[0].str() + " of the setting 'codeArea" + to_string(areaCount) + "' is invalid (expected: sectorfile format or double values, separated by colon). This area will not be processed further.").c_str(), true, false, false, false, false);
+						sSetting = "";
+						codeArea.clear();
+						continue;
+					}
+				}
+				codeArea.push_back(polygonVertex);
+				sSetting = coord.suffix();
+			}
+
+			if (codeArea.size() > 2)
+			{
+#ifdef _DEBUG
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", (to_string(codeArea.size()) + " coordinate pairs found for codeArea" + to_string(areaCount)).c_str(), true, false, false, false, false);
+#endif // _DEBUG
+				codeAreas.insert(make_pair(squawk, codeArea));
+			}
+			else
+			{
+				DisplayUserMessage(MY_PLUGIN_NAME, "Setting Error", ("The setting 'codeArea" + to_string(areaCount) + "' provides not enough valid coordinate pairs (expected: at least 3). This area will not be processed further.").c_str(), true, false, false, false, false);
+			}
+			areaCount++;
 		}
+#ifdef _DEBUG
+		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Reading of settings completed", true, false, false, false, false);
+#endif // _DEBUG
 	}
 	catch (std::runtime_error const& e)
 	{
