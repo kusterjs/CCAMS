@@ -83,6 +83,7 @@ This plugin provides capabilities/functionalities to:
 * ```.help ccams``` provides a list of all available plugin commands
 * ```.ccams ehslist``` displays the Mode S EHS list
 * ```.ccams auto``` enables/disables automatic transponder code assignment for IFR airborne aircraft
+* ```.ccams tracking``` enables/disables transponder code validation when starting to track a flight
 * ```.ccams reload``` reloads local (refer to plugin settings) and remote (mode S capability and plugin version) config data
 
 ### Plugin settings
