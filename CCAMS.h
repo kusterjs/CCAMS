@@ -19,10 +19,14 @@ using namespace EuroScopePlugIn;
 #define MY_PLUGIN_VERSION		"2.3.3"
 #endif
 #define MY_PLUGIN_VERSIONCODE		14
+#ifdef USE_HTTPLIB
 #define MY_PLUGIN_UPDATE_BASE		"https://raw.githubusercontent.com"
 #define MY_PLUGIN_UPDATE_ENDPOINT	"/kusterjs/CCAMS/master/config2.txt"
 #define MY_PLUGIN_APP_BASE			"https://ccams.kilojuliett.ch"
 #define MY_PLUGIN_APP_ENDPOINT		"/squawk"
+#else
+#define MY_PLUGIN_UPDATE_URL	"https://raw.githubusercontent.com/kusterjs/CCAMS/master/config2.txt"
+#endif
 #define MY_PLUGIN_DEVELOPER			"Jonas Kuster, Pierre Ferran, Oliver Gr�tzmann"
 #define MY_PLUGIN_COPYRIGHT			"GPL v3"
 //#define MY_PLUGIN_VIEW      "Standard ES radar screen"
