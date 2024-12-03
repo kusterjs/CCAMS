@@ -10,14 +10,15 @@ string LoadUpdateString()
 	httplib::Client cli(MY_PLUGIN_UPDATE_BASE);
 	auto res = cli.Get(MY_PLUGIN_UPDATE_ENDPOINT);
 
-	if (!res || res->status != httplib::StatusCode::OK_200) {
-		auto err = res.error();
-		throw error{ string {"Connection failed to verify the plugin version. Error: " + httplib::to_string(err) } };
+	if (!res) {
+		throw std::runtime_error("Connection failed to verify the plugin version. Error: " + httplib::to_string(res.error()));
 	}
 
-	std::string answer = res->body;
+	if (res->status != httplib::StatusCode::OK_200) {
+		throw std::runtime_error("Failed to verify the plugin version. HTTP status: " + std::to_string(res->status));
+	}
 
-	return answer;
+	return res->body;
 }
 #else
 string LoadUpdateString()
@@ -82,7 +83,7 @@ string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CControll
 		}
 #endif
 	}
-	if (codes.size() > 0)
+	if (!codes.empty())
 	{
 		query_string += "&codes=" + codes;
 	}
@@ -91,19 +92,17 @@ string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CControll
 	};
 
 	httplib::Client client(MY_PLUGIN_APP_BASE);
-	std::string uri = MY_PLUGIN_APP_ENDPOINT + std::string("?") + query_string;
+	string uri = MY_PLUGIN_APP_ENDPOINT + string("?") + query_string;
 	auto res = client.Get(uri, headers);
 
 	if (!res || res->status != httplib::StatusCode::OK_200) {
-		auto err = res.error();
-		return string{ httplib::to_string(err) };
+		return string{ httplib::to_string(res.error()) };
 	}
 
-	std::string answer = res->body;
-
+	string answer = res->body;
 	trim(answer);
 
-	if (answer.length() == 0)
+	if (answer.empty())
 		return string{ "E411" };
 	return answer;
 }
