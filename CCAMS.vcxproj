@@ -157,7 +157,7 @@
       </ModuleDefinitionFile>
       <AdditionalDependencies>Version.lib;User32.lib;Advapi32.lib;Crypt32.lib
 ;lib\EuroScopePlugInDll.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>D:\Repos\ogruetzmann\ModeS\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <Profile>true</Profile>
     </Link>
     <Midl>
