@@ -55,7 +55,7 @@ string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CControll
 	for (size_t i = 0; i < usedCodes.size(); i++)
 	{
 		if (i > 0)
-			codes += ",";
+			codes += "~";
 		codes += usedCodes[i];
 	}
 

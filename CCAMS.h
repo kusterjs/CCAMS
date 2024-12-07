@@ -14,9 +14,9 @@ using namespace EuroScopePlugIn;
 
 #define MY_PLUGIN_NAME			"CCAMS"
 #ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.3.7 DEV"
+#define MY_PLUGIN_VERSION		"2.3.9 DEV"
 #else
-#define MY_PLUGIN_VERSION		"2.3.3"
+#define MY_PLUGIN_VERSION		"2.3.8"
 #endif
 #define MY_PLUGIN_VERSIONCODE		14
 #ifdef USE_HTTPLIB
@@ -27,7 +27,7 @@ using namespace EuroScopePlugIn;
 #else
 #define MY_PLUGIN_UPDATE_URL	"https://raw.githubusercontent.com/kusterjs/CCAMS/master/config2.txt"
 #endif
-#define MY_PLUGIN_DEVELOPER			"Jonas Kuster, Pierre Ferran, Oliver Gr�tzmann"
+#define MY_PLUGIN_DEVELOPER			"Jonas Kuster, Pierre Ferran, Oliver Grützmann"
 #define MY_PLUGIN_COPYRIGHT			"GPL v3"
 //#define MY_PLUGIN_VIEW      "Standard ES radar screen"
 
