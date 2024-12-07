@@ -1060,7 +1060,7 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 		}
 	}
 
-	// searching for duplicate assignments
+	// searching for duplicate assignments in radar targets
 	for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
 		RadarTarget = RadarTargetSelectNext(RadarTarget))
 	{
@@ -1097,6 +1097,44 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 			}
 		}
 	}
+
+	// searching for duplicate assignments in flight plans
+	for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
+	{
+		if (strcmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0)
+			continue;
+
+		if (strlen(assr) == 4)
+		{
+			if (strcmp(assr, FP.GetControllerAssignedData().GetSquawk()) == 0 || strcmp(assr, FP.GetCorrelatedRadarTarget().GetPosition().GetSquawk()) == 0)
+			{
+				// duplicate identified for the assigned code
+#ifdef _DEBUG
+				DisplayMsg = "ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+				return false;
+			}
+		}
+		else
+		{
+			if (strcmp(pssr, FP.GetControllerAssignedData().GetSquawk()) == 0 || strcmp(pssr, FP.GetCorrelatedRadarTarget().GetPosition().GetSquawk()) == 0)
+			{
+				// duplicate identified for the actual set code
+#ifdef _DEBUG
+				DisplayMsg = "SET code '" + string{ pssr } + "' of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+				return false;
+			}
+			else
+			{
+				// as an option, if no code has been assigned and the currently used one has not been identified as a dpublicate, it could be set as the assigned code
+				//FlightPlan.GetControllerAssignedData().SetSquawk(pssr);
+			}
+		}
+	}
+
 	// no duplicate with assigend or used codes has been found
 #ifdef _DEBUG
 	DisplayMsg = "No duplicates found for " + string{ FlightPlan.GetCallsign() } + " (ASSIGNED '" + assr + "', SET code " + pssr + ")";
