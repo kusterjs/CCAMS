@@ -88,7 +88,7 @@ string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CControll
 		query_string += "&codes=" + codes;
 	}
 	httplib::Headers headers = {
-		{"User-Agent", "EuroScope " + (string)ESversion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION }
+		{"User-Agent", "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION }
 	};
 
 	httplib::Client client(MY_PLUGIN_APP_BASE);
