@@ -9,6 +9,11 @@
 #include <EuroScopePlugIn.h>
 #include "CCAMS.h"
 
+#ifdef USE_HTTPLIB
+#define CPPHTTPLIB_OPENSSL_SUPPORT
+#include <httplib.h>
+#include <Windows.h>
+#endif
 
 using namespace std;
 
