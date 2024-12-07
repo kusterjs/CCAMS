@@ -22,8 +22,6 @@ string LoadUpdateString();
 
 string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType);
 
-string ESversion();
-
 inline std::vector<std::string> split(const std::string & s, char delim)
 {
 	std::istringstream ss(s);
