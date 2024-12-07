@@ -21,6 +21,7 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+[Rr]elease-static/
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -32,6 +33,9 @@ bld/
 [Oo]ut/
 [Ll]og/
 [Ll]ogs/
+
+# vcpkg dependencies
+vcpkg_installed/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/

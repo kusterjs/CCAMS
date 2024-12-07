@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29424.173
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CCAMS", "CCAMS.vcxproj", "{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}"
 EndProject
@@ -9,15 +9,15 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
 		Release|x86 = Release|x86
-		Release-Static|x86 = Release-Static|x86
+		Release-static|x86 = Release-static|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Debug|x86.ActiveCfg = Debug|Win32
 		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Debug|x86.Build.0 = Debug|Win32
 		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Release|x86.ActiveCfg = Release|Win32
 		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Release|x86.Build.0 = Release|Win32
-		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Release-Static|x86.ActiveCfg = Release-Static|Win32
-		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Release-Static|x86.Build.0 = Release-Static|Win32
+		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Release-static|x86.ActiveCfg = Release-static|Win32
+		{26DEB76D-3967-4550-80CE-5C9DAAFAA1FC}.Release-static|x86.Build.0 = Release-static|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
