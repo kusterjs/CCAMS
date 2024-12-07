@@ -655,7 +655,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 				if (_stricmp(RadarTarget.GetCallsign(), FlightPlan.GetCallsign()) == 0)
 					continue;
 				else if (_stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0
-					&& RadarTarget.GetCorrelatedFlightPlan().GetTrackingControllerCallsign() > 0)
+					&& strlen(RadarTarget.GetCorrelatedFlightPlan().GetTrackingControllerCallsign()) > 0)
 				{
 					PendingSquawks.insert(std::make_pair(RadarTarget.GetCallsign(), std::async(LoadWebSquawk,
 						RadarTarget.GetCorrelatedFlightPlan(), ControllerMyself(), collectUsedCodes(RadarTarget.GetCorrelatedFlightPlan()), IsADEPvicinity(RadarTarget.GetCorrelatedFlightPlan()), GetConnectionType())));
@@ -1016,7 +1016,7 @@ bool CCAMS::IsEligibleSquawkModeS(const EuroScopePlugIn::CFlightPlan& FlightPlan
 	//return isAcModeS(FlightPlan) && isApModeS(FlightPlan.GetFlightPlanData().GetDestination()) &&
 	//	(isApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || !isADEPvicinity(FlightPlan));
 	return IsAcModeS(FlightPlan) && IsApModeS(FlightPlan.GetFlightPlanData().GetDestination()) &&
-		(IsApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || (!IsADEPvicinity(FlightPlan) && IsApModeS(ControllerMyself().GetCallsign())));
+		(IsApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || (!IsADEPvicinity(FlightPlan) && (strlen(FlightPlan.GetTrackingControllerCallsign()) > 0) ? IsApModeS(FlightPlan.GetTrackingControllerCallsign()) : IsApModeS(ControllerMyself().GetCallsign())));
 }
 
 bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
