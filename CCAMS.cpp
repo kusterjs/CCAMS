@@ -1185,7 +1185,7 @@ std::vector<const char*> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 	return usedCodes;
 }
 
-string ESversion()
+int* ESversion()
 {
 	int EuroScopeVersion[4] = { 0, 0, 0, 0 };
 
@@ -1220,6 +1220,12 @@ string ESversion()
 		delete[] verData;
 	}
 
+	return EuroScopeVersion;
+}
+
+string EuroScopeVersion()
+{
+	int* EuroScopeVersion = ESversion();
 	return to_string(EuroScopeVersion[0]) + "." + to_string(EuroScopeVersion[1]) + "." + to_string(EuroScopeVersion[2]) + "." + to_string(EuroScopeVersion[3]);
 }
 
