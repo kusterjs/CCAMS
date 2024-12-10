@@ -18,9 +18,9 @@
 using namespace std;
 
 
-string LoadUpdateString();
+string LoadUpdateString(string EuroScopeVersion);
 
-string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType);
+string LoadWebSquawk(string EuroScopeVersion, EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType);
 
 inline std::vector<std::string> split(const std::string & s, char delim)
 {

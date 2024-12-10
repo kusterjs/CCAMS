@@ -41,7 +41,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 	}
 
 	// Start new thread to get the version file from the server
-	fUpdateString = async(LoadUpdateString);
+	fUpdateString = async(LoadUpdateString, EuroScopeVersion());
 
 	// Set default setting values
 	ConnectionStatus = 0;
@@ -148,7 +148,7 @@ bool CCAMS::PluginCommands(cmatch Command)
 	}
 	else if (sCommand == "reload")
 	{
-		fUpdateString = async(LoadUpdateString);
+		fUpdateString = async(LoadUpdateString, EuroScopeVersion());
 		ReadSettings();
 		return true;
 	}
@@ -156,6 +156,17 @@ bool CCAMS::PluginCommands(cmatch Command)
 	else if (sCommand == "reset")
 	{
 		ProcessedFlightPlans.clear();
+		return true;
+	}
+	else if (sCommand == "esver")
+	{
+		std::vector<int> version = GetExeVersion();
+		if (version.empty()) {
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Failed to retrieve executable version.", true, false, false, false, false);
+		}
+		else {
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", string("Executable Version: " + to_string(version[0]) + "." + to_string(version[1]) + "." + to_string(version[2]) + "." + to_string(version[3])).c_str(), true, false, false, false, false);
+		}
 		return true;
 	}
 	else if (sCommand == "list")
@@ -465,7 +476,7 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 			if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
 			{
 				PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk,
-					FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
+					EuroScopeVersion(), FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
 #ifdef _DEBUG
 				if (GetConnectionType() > 2)
 				{
@@ -617,7 +628,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 				else if (_stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0
 					&& strlen(RadarTarget.GetCorrelatedFlightPlan().GetTrackingControllerCallsign()) > 0)
 				{
-					PendingSquawks.insert(std::make_pair(RadarTarget.GetCallsign(), std::async(LoadWebSquawk,
+					PendingSquawks.insert(std::make_pair(RadarTarget.GetCallsign(), std::async(LoadWebSquawk, EuroScopeVersion(),
 						RadarTarget.GetCorrelatedFlightPlan(), ControllerMyself(), collectUsedCodes(RadarTarget.GetCorrelatedFlightPlan()), IsADEPvicinity(RadarTarget.GetCorrelatedFlightPlan()), GetConnectionType())));
 #ifdef _DEBUG
 					log << RadarTarget.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
@@ -715,7 +726,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	}
 	else
 	{
-		PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk,
+		PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, EuroScopeVersion(),
 			FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
 #ifdef _DEBUG
 		log << FlightPlan.GetCallsign() << ":FP processed:unique code AUTO assigned";
@@ -730,14 +741,14 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 
 void CCAMS::AssignSquawk(CFlightPlan& FlightPlan)
 {
-	future<string> webSquawk = std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
+	future<string> webSquawk = std::async(LoadWebSquawk, EuroScopeVersion(), FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
 
 	if (webSquawk.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 	{
 		string squawk = webSquawk.get();
 		if (!FlightPlanSelect(FlightPlan.GetCallsign()).GetControllerAssignedData().SetSquawk(squawk.c_str()))
 		{
-			PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk,
+			PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, EuroScopeVersion(),
 				FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
 		}
 	}
@@ -795,7 +806,7 @@ void CCAMS::DoInitialLoad(future<string> & fmessage)
 #endif
 		if (regex_match(message, match, regex("(\\d+)[:](\\d+)[:]([A-Z,]+)[:]([^:]+)", regex::icase)))
 		{
-			int* EuroScopeVersion = ESversion();
+			std::vector<int> EuroScopeVersion = GetExeVersion();
 
 			if (EuroScopeVersion[0] == 3)
 			{
@@ -1151,48 +1162,53 @@ std::vector<const char*> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 	return usedCodes;
 }
 
-int* ESversion()
-{
-	int EuroScopeVersion[4] = { 0, 0, 0, 0 };
-
-	DWORD verHandle = 0;
-	char szVersionFile[MAX_PATH];
-	GetModuleFileName(NULL, szVersionFile, MAX_PATH);
-	const DWORD verSize = GetFileVersionInfoSize(szVersionFile, &verHandle);
-
-	if (verSize != NULL && verHandle == 0)
-	{
-		char* verData = new char[verSize];
-
-		if (GetFileVersionInfo(szVersionFile, verHandle, verSize, verData))
-		{
-			VS_FIXEDFILEINFO* verInfo = nullptr;
-			unsigned int size = 0;
-
-			if (VerQueryValue(verData, "\\", (LPVOID*)&verInfo, &size))
-			{
-				if (size)
-				{
-					if (verInfo->dwSignature == 0xfeef04bd)
-					{
-						EuroScopeVersion[0] = (verInfo->dwFileVersionMS >> 16) & 0xffff;
-						EuroScopeVersion[1] = (verInfo->dwFileVersionMS >> 0) & 0xffff;
-						EuroScopeVersion[2] = (verInfo->dwFileVersionLS >> 16) & 0xffff;
-						EuroScopeVersion[3] = (verInfo->dwFileVersionLS >> 0) & 0xffff;
-					}
-				}
-			}
-		}
-		delete[] verData;
+std::vector<int> CCAMS::GetExeVersion() {
+	// Get the path of the executable
+	char exePath[MAX_PATH];
+	if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) == 0) {
+		return {}; // Return an empty vector on failure
 	}
 
-	return EuroScopeVersion;
+	// Get the size of the version info resource
+	DWORD handle = 0; // Explicitly initialize handle
+	DWORD versionInfoSize = GetFileVersionInfoSizeA(exePath, &handle);
+	if (versionInfoSize == 0) {
+		return {}; // Return an empty vector on failure
+	}
+
+	// Allocate memory to hold the version info
+	std::vector<char> versionInfo(versionInfoSize);
+	if (!GetFileVersionInfoA(exePath, handle, versionInfoSize, versionInfo.data())) {
+		return {}; // Return an empty vector on failure
+	}
+
+	// Extract the fixed file info
+	VS_FIXEDFILEINFO* fileInfo = nullptr;
+	UINT fileInfoSize = 0;
+	if (!VerQueryValueA(versionInfo.data(), "\\", reinterpret_cast<LPVOID*>(&fileInfo), &fileInfoSize)) {
+		return {}; // Return an empty vector on failure
+	}
+
+	if (fileInfo) {
+		// Extract version information and return as an array
+		return {
+			static_cast<int>(HIWORD(fileInfo->dwFileVersionMS)), // Major
+			static_cast<int>(LOWORD(fileInfo->dwFileVersionMS)), // Minor
+			static_cast<int>(HIWORD(fileInfo->dwFileVersionLS)), // Build
+			static_cast<int>(LOWORD(fileInfo->dwFileVersionLS))  // Revision
+		};
+	}
+
+	return {}; // Return an empty vector if no version info is available
 }
 
-string EuroScopeVersion()
+string CCAMS::EuroScopeVersion()
 {
-	int* EuroScopeVersion = ESversion();
-	return to_string(EuroScopeVersion[0]) + "." + to_string(EuroScopeVersion[1]) + "." + to_string(EuroScopeVersion[2]) + "." + to_string(EuroScopeVersion[3]);
+	std::vector<int> version = GetExeVersion();
+	if (!version.empty())
+		return to_string(version[0]) + "." + to_string(version[1]) + "." + to_string(version[2]) + "." + to_string(version[3]);
+	
+	return "{NO VERSION DATA}";
 }
 
 #ifdef _DEBUG

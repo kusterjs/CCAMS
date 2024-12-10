@@ -14,9 +14,9 @@ using namespace EuroScopePlugIn;
 
 #define MY_PLUGIN_NAME			"CCAMS"
 #ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.4.1 DEV"
+#define MY_PLUGIN_VERSION		"2.4.3 DEV"
 #else
-#define MY_PLUGIN_VERSION		"2.4.1"
+#define MY_PLUGIN_VERSION		"2.4.3"
 #endif
 #define MY_PLUGIN_VERSIONCODE		15
 #ifdef USE_HTTPLIB
@@ -70,8 +70,6 @@ struct SquawkCodes
 
 static const regex MODE_S_AIRPORTS("^((E([BDHLT]|P(?!CE|DA|DE|IR|KS|LK|LY|MB|MI|MM|OK|PR|PW|SN|TM)|URM)|L[DFHIKORZ])[A-Z]{2}|LS(A|G[CG]|Z[BGHR]))", regex::icase);
 
-int* ESversion();
-string EuroScopeVersion();
 
 class CCAMS :
 	public EuroScopePlugIn::CPlugIn
@@ -102,6 +100,8 @@ public:
 	void OnTimer(int Counter);
 
 	bool PluginCommands(cmatch Command);
+	std::vector<int> GetExeVersion();
+	string EuroScopeVersion();
 
 private:
 	future<string> fUpdateString;
@@ -132,7 +132,7 @@ private:
 	bool IsApModeS(const string& icao) const;
 	bool IsEHS(const CFlightPlan& FlightPlan) const;
 	bool HasEquipment(const CFlightPlan& FlightPlan, bool acceptEquipmentFAA, bool acceptEquipmentICAO, string CodesICAO) const;
-	double GetDistanceFromOrigin(const CFlightPlan & FlightPlan) const;
+	double GetDistanceFromOrigin(const CFlightPlan& FlightPlan) const;
 	bool IsADEPvicinity(const CFlightPlan& FlightPlan) const;
 	bool IsEligibleSquawkModeS(const CFlightPlan& FlightPlan) const;
 	bool HasValidSquawk(const CFlightPlan& FlightPlan);
