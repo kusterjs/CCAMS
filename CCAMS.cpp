@@ -1193,7 +1193,8 @@ std::vector<const char*> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 		}
 
 		sort(usedCodes.begin(), usedCodes.end());
-		usedCodes.erase(unique(usedCodes.begin(), usedCodes.end()), usedCodes.end());
+		auto u = unique(usedCodes.begin(), usedCodes.end());
+		usedCodes.erase(u, usedCodes.end());
 	}
 	return usedCodes;
 }
