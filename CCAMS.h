@@ -16,9 +16,9 @@ using namespace EuroScopePlugIn;
 #ifdef _DEBUG
 #define MY_PLUGIN_VERSION		"2.4.1 DEV"
 #else
-#define MY_PLUGIN_VERSION		"2.4.0"
+#define MY_PLUGIN_VERSION		"2.4.1"
 #endif
-#define MY_PLUGIN_VERSIONCODE		14
+#define MY_PLUGIN_VERSIONCODE		15
 #ifdef USE_HTTPLIB
 #define MY_PLUGIN_UPDATE_BASE		"https://raw.githubusercontent.com"
 #define MY_PLUGIN_UPDATE_ENDPOINT	"/kusterjs/CCAMS/master/config2.txt"
@@ -80,7 +80,7 @@ public:
 	explicit CCAMS(const EquipmentCodes&& ec = EquipmentCodes(), const SquawkCodes&& sc = SquawkCodes());
 	virtual ~CCAMS();
 
-	bool OnCompileCommand(const char* command);
+	bool OnCompileCommand(const char* sCommandLine);
 	void OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget,
 					  int ItemCode,
 					  int TagData,
@@ -101,7 +101,7 @@ public:
 
 	void OnTimer(int Counter);
 
-	bool PluginCommands(const char* Command);
+	bool PluginCommands(cmatch Command);
 
 private:
 	future<string> fUpdateString;
@@ -118,7 +118,7 @@ private:
 	bool acceptEquipmentICAO;
 	bool acceptEquipmentFAA;
 	bool updateOnStartTracking;
-	bool autoAssign;
+	int autoAssign;
 	int APTcodeMaxGS;
 	int APTcodeMaxDist;
 

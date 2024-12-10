@@ -49,9 +49,9 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 	acceptEquipmentICAO = true;
 	acceptEquipmentFAA = true;
 #ifdef _DEBUG
-	autoAssign = true;
+	autoAssign = 3;
 #else
-	autoAssign = true;
+	autoAssign = 10;
 #endif
 	APTcodeMaxGS = 50;
 	APTcodeMaxDist = 3;
@@ -62,21 +62,21 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 CCAMS::~CCAMS()
 {}
 
-bool CCAMS::OnCompileCommand(const char* command)
+bool CCAMS::OnCompileCommand(const char* sCommandLine)
 {
-	string commandString(command);
+	string commandString(sCommandLine);
 	cmatch matches;
 
-	if (_stricmp(command, ".help") == 0)
+	if (_stricmp(sCommandLine, ".help") == 0)
 	{
 		DisplayUserMessage("HELP", "HELP", ".HELP CCAMS | Centralised code assignment and management system Help", true, true, true, true, false);
 		return NULL;
 	}
-	else if (_stricmp(command, ".help ccams") == 0)
+	else if (_stricmp(sCommandLine, ".help ccams") == 0)
 	{
 		// Display HELP
 		DisplayUserMessage("HELP", MY_PLUGIN_NAME, ".CCAMS EHSLIST | Displays the flight plan list with EHS values of the currently selected aircraft.", true, true, true, true, false);
-		DisplayUserMessage("HELP", MY_PLUGIN_NAME, ".CCAMS AUTO | Activates or deactivates automatic code assignment.", true, true, true, true, false);
+		DisplayUserMessage("HELP", MY_PLUGIN_NAME, ".CCAMS AUTO [SECONDS] | Activates or deactivates automatic code assignment. Optionally, the refresh rate (in seconds) can be customised.", true, true, true, true, false);
 		DisplayUserMessage("HELP", MY_PLUGIN_NAME, ".CCAMS TRACKING | Activates or deactivates transponder code validation when starting to track a flight.", true, true, true, true, false);
 		DisplayUserMessage("HELP", MY_PLUGIN_NAME, ".CCAMS RELOAD | Force load of local and remote settings.", true, true, true, true, false);
 #ifdef _DEBUG
@@ -85,43 +85,52 @@ bool CCAMS::OnCompileCommand(const char* command)
 #endif
 		return true;
 	}
-	else if (regex_search(command, matches, regex("^\\.ccams\\s+(\\w+)", regex::icase)))
+	else if (regex_search(sCommandLine, matches, regex("^\\.ccams\\s+(\\w+)(?:\\s+(\\d+))?", regex::icase)))
 	{
-		return PluginCommands(matches[1].str().c_str());
+		return PluginCommands(matches);
 	}
 
 	return false;
 }
 
-bool CCAMS::PluginCommands(const char* Command)
+bool CCAMS::PluginCommands(cmatch Command)
 {
-	//string sCommand(Command);
-	if (_stricmp(Command, "ehslist") == 0)
+	string sCommand = Command[1].str();
+	if (sCommand == "ehslist")
 	{
 		FpListEHS.ShowFpList(true);
 		return true;
 	}
-	else if (_stricmp(Command, "auto") == 0)
+	else if (sCommand == "auto")
 	{
+		int autoAssignRefreshRate = 0;
+		if (Command[2].str().length() > 0) autoAssignRefreshRate = stoi(Command[2].str());
+
 		if (!pluginVersionCheck)
 		{
 			DisplayUserMessage(MY_PLUGIN_NAME, "Error", "Your plugin version is not up-to-date and the automatic code assignment therefore not available.", true, true, false, false, false);
 		}
-		else if (autoAssign)
+		else if (autoAssignRefreshRate > 0)
 		{
-			autoAssign = false;
+			autoAssign = autoAssignRefreshRate;
+			SaveDataToSettings("AutoAssign", "Automatic assignment of squawk codes", to_string(autoAssignRefreshRate).c_str());
+			DisplayUserMessage(MY_PLUGIN_NAME, "Setting changed", string("Automatic code assignment enabled (refresh rate " + to_string(autoAssignRefreshRate) + " seconds)").c_str(), true, true, false, false, false);
+		}
+		else if (autoAssign > 0)
+		{
+			autoAssign = 0;
 			SaveDataToSettings("AutoAssign", "Automatic assignment of squawk codes", "0");
 			DisplayUserMessage(MY_PLUGIN_NAME, "Setting changed", "Automatic code assignment disabled", true, true, false, false, false);
 		}
 		else
 		{
-			autoAssign = true;
-			SaveDataToSettings("AutoAssign", "Automatic assignment of squawk codes", "1");
-			DisplayUserMessage(MY_PLUGIN_NAME, "Setting changed", "Automatic code assignment enabled", true, true, false, false, false);
+			autoAssign = 10;
+			SaveDataToSettings("AutoAssign", "Automatic assignment of squawk codes", "10");
+			DisplayUserMessage(MY_PLUGIN_NAME, "Setting changed", "Automatic code assignment enabled (default refresh rate 10 seconds)", true, true, false, false, false);
 		}
 		return true;
 	}
-	else if (_stricmp(Command, "tracking") == 0)
+	else if (sCommand == "tracking")
 	{
 		if (updateOnStartTracking)
 		{
@@ -137,19 +146,19 @@ bool CCAMS::PluginCommands(const char* Command)
 		}
 		return true;
 	}
-	else if (_stricmp(Command, "reload") == 0)
+	else if (sCommand == "reload")
 	{
 		fUpdateString = async(LoadUpdateString);
 		ReadSettings();
 		return true;
 	}
 #ifdef _DEBUG
-	else if (_stricmp(Command, "reset") == 0)
+	else if (sCommand == "reset")
 	{
 		ProcessedFlightPlans.clear();
 		return true;
 	}
-	else if (_stricmp(Command, "list") == 0)
+	else if (sCommand == "list")
 	{
 		string DisplayMsg;
 		for (auto& pfp : ProcessedFlightPlans)
@@ -163,7 +172,7 @@ bool CCAMS::PluginCommands(const char* Command)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 		return true;
 	}
-	else if (_stricmp(Command, "sqlist") == 0)
+	else if (sCommand == "sqlist")
 	{
 		for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
 			RadarTarget = RadarTargetSelectNext(RadarTarget))
@@ -183,7 +192,7 @@ bool CCAMS::PluginCommands(const char* Command)
 		for (CFlightPlan FlightPlan = FlightPlanSelectFirst(); FlightPlan.IsValid();
 			FlightPlan = FlightPlanSelectNext(FlightPlan))
 		{
-			if (_stricmp(Command, FlightPlan.GetCallsign()) == 0)
+			if (sCommand == FlightPlan.GetCallsign())
 			{
 				string DisplayMsg = "Status " + string{FlightPlan.GetCallsign()} + ": " + (FlightPlan.GetSimulated() ? "simulated" : "not sim") + 
 				", FP Type '" + FlightPlan.GetFlightPlanData().GetPlanType() + "'" + 
@@ -251,7 +260,6 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 		{
 			if (IsEHS(FlightPlan))
 			{
-				//strncpy(sItemString, to_string(RadarTarget.GetPosition().GetReportedHeading()).c_str(), 16);
 				sprintf_s(sItemString, 16, "%03i°", RadarTarget.GetPosition().GetReportedHeading() % 360);
 	#ifdef _DEBUG
 				string DisplayMsg{ to_string(RadarTarget.GetPosition().GetReportedHeading()) };
@@ -333,7 +341,6 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 			}
 			strcpy_s(sItemString, 16, assr);
 		}
-
 	}
 }
 
@@ -366,7 +373,7 @@ void CCAMS::OnFlightPlanFlightPlanDataUpdate(CFlightPlan FlightPlan)
 	}
 	else if (FlightPlan.GetTrackingControllerIsMe())
 	{
-		if (autoAssign && pluginVersionCheck && ConnectionStatus > 10)
+		if (autoAssign > 0 && pluginVersionCheck && ConnectionStatus > 10)
 		{
 #ifdef _DEBUG
 			log << FlightPlan.GetCallsign() << ":FP processed for automatic squawk assignment:flight plan update and controller is tracking";
@@ -389,7 +396,6 @@ void CCAMS::OnFlightPlanFlightStripPushed(CFlightPlan FlightPlan, const char* sS
 		// shouldn't be required that often anymore (if at all) since call signs are not added to the list that generously
 		auto it = find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign());
 		if (it != ProcessedFlightPlans.end()) {
-			//ProcessedFlightPlans.erase(it);
 			ProcessedFlightPlans.erase(remove(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()), ProcessedFlightPlans.end());
 #ifdef _DEBUG
 			log << FlightPlan.GetCallsign() << ":FP removed from processed list:strip push received";
@@ -401,7 +407,6 @@ void CCAMS::OnFlightPlanFlightStripPushed(CFlightPlan FlightPlan, const char* sS
 	}
 
 }
-
 
 void CCAMS::OnRefreshFpListContent(CFlightPlanList AcList)
 {
@@ -511,21 +516,23 @@ void CCAMS::OnTimer(int Counter)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Active connection established, automatic squawk assignment enabled", true, false, false, false, false);
 #endif
 
-
 	if (ControllerMyself().IsValid() && ControllerMyself().IsController())
 	{
 		AssignPendingSquawks();
 
-		if (!(Counter % 3) && autoAssign && pluginVersionCheck && ConnectionStatus > 10)
+		if (autoAssign > 0 && pluginVersionCheck && ConnectionStatus > 10)
 		{
+			if (!(Counter % autoAssign))
+			{
 #ifdef _DEBUG
-			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Starting timer-based auto-assignments", true, false, false, false, false);
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Starting timer-based auto-assignments", true, false, false, false, false);
 #endif // _DEBUG
 
-			for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
-				RadarTarget = RadarTargetSelectNext(RadarTarget))
-			{
-				AssignAutoSquawk(RadarTarget.GetCorrelatedFlightPlan());
+				for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
+					RadarTarget = RadarTargetSelectNext(RadarTarget))
+				{
+					AssignAutoSquawk(RadarTarget.GetCorrelatedFlightPlan());
+				}
 			}
 		}
 	}
@@ -543,53 +550,6 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	// check controller class validity and qualification, restrict to APP/CTR/FSS controller types and respect a minimum connection duration (time)
 	if (!ControllerMyself().IsValid() || !ControllerMyself().IsController() || ControllerMyself().GetRating() < 2 || (ControllerMyself().GetFacility() > 1 && ControllerMyself().GetFacility() < 5))
 		return;
-
-//	// check for exclusion arguments from automatic squawk assignment
-//	if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
-//	{
-//		// this flight was already processed
-//		if (FlightPlan.GetSimulated() || strcmp(FlightPlan.GetFlightPlanData().GetPlanType(), "V") == 0)
-//			return;
-//		else if (FlightPlan.GetFlightPlanData().IsReceived() && FlightPlan.GetSectorEntryMinutes() < 0)
-//			return;
-//		else if (HasValidSquawk(FlightPlan))
-//			return;
-//
-//		// The flight was already processed, but the assigned code has become invalid again
-//		// This is probably due to a duplicate, where the code assigned earlier was assigned to a second aircraft by another controller
-//		else if (FlightPlan.GetTrackingControllerIsMe())
-//		{
-//			// attempting to change to squawk of the other aircraft
-//			for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
-//				RadarTarget = RadarTargetSelectNext(RadarTarget))
-//			{
-//				if (_stricmp(RadarTarget.GetCallsign(), FlightPlan.GetCallsign()) == 0)
-//					continue;
-//				else if (_stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0
-//					&& RadarTarget.GetCorrelatedFlightPlan().GetTrackingControllerCallsign() > 0)
-//				{
-//					PendingSquawks.insert(std::make_pair(RadarTarget.GetCallsign(), std::async(LoadWebSquawk,
-//						RadarTarget.GetCorrelatedFlightPlan(), ControllerMyself(), collectUsedCodes(RadarTarget.GetCorrelatedFlightPlan()), IsADEPvicinity(RadarTarget.GetCorrelatedFlightPlan()), GetConnectionType())));
-//#ifdef _DEBUG
-//					log << RadarTarget.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
-//					writeLogFile(log);
-//					DisplayMsg = string{ RadarTarget.GetCallsign() } + ", unique code AUTO assigned due to a detected duplicate with " + FlightPlan.GetCallsign();
-//					DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-//#endif
-//				}
-//			}
-//			return;
-//		}
-//
-//		// removing the call sign from the processed flight plan list to initiate a new assignment
-//		ProcessedFlightPlans.erase(remove(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()), ProcessedFlightPlans.end());
-//#ifdef _DEBUG
-//		log << FlightPlan.GetCallsign() << ":duplicate assigned code:FP removed from processed list";
-//		writeLogFile(log);
-//		string DisplayMsg = string{ FlightPlan.GetCallsign() } + " removed from processed list because the assigned code is no longer valid";
-//		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-//#endif
-//	}
 
 	if (FlightPlan.GetSimulated() || strcmp(FlightPlan.GetFlightPlanData().GetPlanType(), "V") == 0)
 	{
@@ -702,7 +662,6 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	if (!FlightPlan.GetTrackingControllerIsMe())
 	{
 		// the current controller is not tracking the flight plan
-
 		CFlightPlanPositionPredictions Pos = FlightPlan.GetPositionPredictions();
 		int min;
 
@@ -924,11 +883,11 @@ void CCAMS::ReadSettings()
 		{
 			if (strcmp(cstrSetting, "0") == 0)
 			{
-				autoAssign = false;
+				autoAssign = 0;
 			}
-			else if (strcmp(cstrSetting, "1") == 0)
+			else if (stoi(cstrSetting) > 0)
 			{
-				autoAssign = true;
+				autoAssign = stoi(cstrSetting);
 			}
 		}
 	}
@@ -944,11 +903,6 @@ void CCAMS::ReadSettings()
 
 inline bool CCAMS::IsFlightPlanProcessed(CFlightPlan& FlightPlan)
 {
-	//if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
-	//	return true;
-
-	//return false;
-
 	string callsign { FlightPlan.GetCallsign() };
 	for (auto &pfp : ProcessedFlightPlans)
 		if (pfp.compare(callsign) == 0)
@@ -1026,8 +980,6 @@ bool CCAMS::HasEquipment(const CFlightPlan& FlightPlan, bool acceptEquipmentFAA,
 
 bool CCAMS::IsEligibleSquawkModeS(const EuroScopePlugIn::CFlightPlan& FlightPlan) const
 {
-	//return isAcModeS(FlightPlan) && isApModeS(FlightPlan.GetFlightPlanData().GetDestination()) &&
-	//	(isApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || !isADEPvicinity(FlightPlan));
 	return IsAcModeS(FlightPlan) && IsApModeS(FlightPlan.GetFlightPlanData().GetDestination()) &&
 		(IsApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || (!IsADEPvicinity(FlightPlan) && (strlen(FlightPlan.GetTrackingControllerCallsign()) > 0) ? IsApModeS(FlightPlan.GetTrackingControllerCallsign()) : IsApModeS(ControllerMyself().GetCallsign())));
 }
