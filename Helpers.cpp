@@ -23,7 +23,7 @@ string LoadUpdateString()
 #else
 string LoadUpdateString()
 {
-	const string AGENT{ "EuroScope " + (string)ESversion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION };
+	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION };
 	HINTERNET connect = InternetOpen(AGENT.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if (!connect) {
 		throw error{ string {"Connection failed to verify the plugin version. Error: " + to_string(GetLastError()) } };
@@ -111,7 +111,7 @@ string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CControll
 {
 	//PluginData p;
 	//const string AGENT{ "EuroScope " + string { MY_PLUGIN_NAME } + "/" + string { MY_PLUGIN_VERSION } };
-	const string AGENT{ "EuroScope " + (string)ESversion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION };
+	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION };
 	HINTERNET connect = InternetOpen(AGENT.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if (!connect) {
 #ifdef _DEBUG
