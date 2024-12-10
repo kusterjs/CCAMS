@@ -14,9 +14,9 @@ using namespace EuroScopePlugIn;
 
 #define MY_PLUGIN_NAME			"CCAMS"
 #ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.4.1 DEV"
+#define MY_PLUGIN_VERSION		"2.4.5 DEV"
 #else
-#define MY_PLUGIN_VERSION		"2.4.1"
+#define MY_PLUGIN_VERSION		"2.4.5"
 #endif
 #define MY_PLUGIN_VERSIONCODE		15
 #ifdef USE_HTTPLIB
@@ -40,7 +40,8 @@ struct ItemCodes
 		TAG_ITEM_EHS_ROLL,
 		TAG_ITEM_EHS_GS,
 		TAG_ITEM_ERROR_MODES_USE,
-		TAG_ITEM_SQUAWK
+		TAG_ITEM_SQUAWK,
+		TAG_ITEM_EHS_PINNED
 	};
 
 	enum ItemFunctions : int
@@ -51,7 +52,8 @@ struct ItemCodes
 		TAG_FUNC_ASSIGN_SQUAWK_MANUAL,
 		TAG_FUNC_ASSIGN_SQUAWK_VFR,
 		TAG_FUNC_ASSIGN_SQUAWK_MODES,
-		TAG_FUNC_ASSIGN_SQUAWK_DISCRETE
+		TAG_FUNC_ASSIGN_SQUAWK_DISCRETE,
+		TAG_FUNC_TOGGLE_EHS_LIST
 	};
 };
 
@@ -108,6 +110,7 @@ private:
 	vector<string> ProcessedFlightPlans;
 	regex ModeSAirports;
 	CFlightPlanList FpListEHS;
+	vector<string> EHSListFlightPlans;
 	string EquipmentCodesFAA;
 	string EquipmentCodesICAO;
 	string EquipmentCodesICAOEHS;
