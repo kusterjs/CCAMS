@@ -30,10 +30,12 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 
 	RegisterTagItemFunction("Auto assign squawk", ItemCodes::TAG_FUNC_ASSIGN_SQUAWK_AUTO);
 	RegisterTagItemFunction("Open SQUAWK assign popup", ItemCodes::TAG_FUNC_SQUAWK_POPUP);
+	RegisterTagItemFunction("Toggle pin to EHS list", ItemCodes::TAG_FUNC_TOGGLE_EHS_LIST);
 
 	FpListEHS = RegisterFpList("Mode S EHS");
 	if (FpListEHS.GetColumnNumber() == 0)
 	{
+		FpListEHS.AddColumnDefinition("P", 1, false, MY_PLUGIN_NAME, ItemCodes::TAG_ITEM_EHS_PINNED, MY_PLUGIN_NAME, ItemCodes::TAG_FUNC_TOGGLE_EHS_LIST, NULL, NULL);
 		FpListEHS.AddColumnDefinition("C/S", 8, false, NULL, TAG_ITEM_TYPE_CALLSIGN, NULL, TAG_ITEM_FUNCTION_OPEN_FP_DIALOG, NULL, NULL);
 		FpListEHS.AddColumnDefinition("HDG", 5, true, MY_PLUGIN_NAME, ItemCodes::TAG_ITEM_EHS_HDG, NULL, NULL, NULL, NULL);
 		FpListEHS.AddColumnDefinition("Roll", 5, true, MY_PLUGIN_NAME, ItemCodes::TAG_ITEM_EHS_ROLL, NULL, NULL, NULL, NULL);
@@ -352,13 +354,20 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 			}
 			strcpy_s(sItemString, 16, assr);
 		}
+		else if (ItemCode == ItemCodes::TAG_ITEM_EHS_PINNED)
+		{
+			if (std::find(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()) != EHSListFlightPlans.end())
+				strcpy_s(sItemString, 16, "¤");
+			else
+				strcpy_s(sItemString, 16, "¬");
+		}
 	}
 }
 
 void CCAMS::OnFlightPlanDisconnect(CFlightPlan FlightPlan)
 {
-	ProcessedFlightPlans.erase(remove(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()),
-		ProcessedFlightPlans.end());
+	ProcessedFlightPlans.erase(remove(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()), ProcessedFlightPlans.end());
+	EHSListFlightPlans.erase(remove(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()), EHSListFlightPlans.end());
 
 	FpListEHS.RemoveFpFromTheList(FlightPlan);
 }
@@ -430,9 +439,11 @@ void CCAMS::OnRefreshFpListContent(CFlightPlanList AcList)
 #endif
 		for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
 		{
-			FpListEHS.RemoveFpFromTheList(FP);
+			if (std::find(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FP.GetCallsign()) == EHSListFlightPlans.end())
+				FpListEHS.RemoveFpFromTheList(FP);
 		}
 		FpListEHS.AddFpToTheList(FlightPlanSelectASEL());
+
 	}
 }
 
@@ -497,6 +508,13 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 		break;
 	case ItemCodes::TAG_FUNC_ASSIGN_SQUAWK_VFR:
 		FlightPlan.GetControllerAssignedData().SetSquawk(squawkVFR);
+		break;
+	case ItemCodes::TAG_FUNC_TOGGLE_EHS_LIST:
+		if (std::find(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()) != EHSListFlightPlans.end())
+			EHSListFlightPlans.erase(remove(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()), EHSListFlightPlans.end());
+		else
+			EHSListFlightPlans.push_back(FlightPlan.GetCallsign());
+			FpListEHS.AddFpToTheList(FlightPlan);
 		break;
 	default:
 		break;
