@@ -36,7 +36,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 	if (FpListEHS.GetColumnNumber() == 0)
 	{
 		FpListEHS.AddColumnDefinition("P", 1, false, MY_PLUGIN_NAME, ItemCodes::TAG_ITEM_EHS_PINNED, MY_PLUGIN_NAME, ItemCodes::TAG_FUNC_TOGGLE_EHS_LIST, NULL, NULL);
-		FpListEHS.AddColumnDefinition("C/S", 8, false, NULL, TAG_ITEM_TYPE_CALLSIGN, NULL, TAG_ITEM_FUNCTION_OPEN_FP_DIALOG, NULL, NULL);
+		FpListEHS.AddColumnDefinition("C/S", 8, false, NULL, TAG_ITEM_TYPE_CALLSIGN, NULL, TAG_ITEM_FUNCTION_HANDOFF_POPUP_MENU, NULL, TAG_ITEM_FUNCTION_OPEN_FP_DIALOG);
 		FpListEHS.AddColumnDefinition("HDG", 5, true, MY_PLUGIN_NAME, ItemCodes::TAG_ITEM_EHS_HDG, NULL, NULL, NULL, NULL);
 		FpListEHS.AddColumnDefinition("Roll", 5, true, MY_PLUGIN_NAME, ItemCodes::TAG_ITEM_EHS_ROLL, NULL, NULL, NULL, NULL);
 		FpListEHS.AddColumnDefinition("GS", 4, true, MY_PLUGIN_NAME, ItemCodes::TAG_ITEM_EHS_GS, NULL, NULL, NULL, NULL);
@@ -450,6 +450,17 @@ void CCAMS::OnRefreshFpListContent(CFlightPlanList AcList)
 void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RECT Area)
 {
 	CFlightPlan FlightPlan = FlightPlanSelectASEL();
+
+	if (FunctionId == ItemCodes::TAG_FUNC_TOGGLE_EHS_LIST)
+	{
+		if (std::find(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()) != EHSListFlightPlans.end())
+			EHSListFlightPlans.erase(remove(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()), EHSListFlightPlans.end());
+		else
+			EHSListFlightPlans.push_back(FlightPlan.GetCallsign());
+		FpListEHS.AddFpToTheList(FlightPlan);
+		return;
+	}
+
 	if (!ControllerMyself().IsValid() || !ControllerMyself().IsController())
 		return;
 
@@ -508,13 +519,6 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 		break;
 	case ItemCodes::TAG_FUNC_ASSIGN_SQUAWK_VFR:
 		FlightPlan.GetControllerAssignedData().SetSquawk(squawkVFR);
-		break;
-	case ItemCodes::TAG_FUNC_TOGGLE_EHS_LIST:
-		if (std::find(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()) != EHSListFlightPlans.end())
-			EHSListFlightPlans.erase(remove(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()), EHSListFlightPlans.end());
-		else
-			EHSListFlightPlans.push_back(FlightPlan.GetCallsign());
-			FpListEHS.AddFpToTheList(FlightPlan);
 		break;
 	default:
 		break;
