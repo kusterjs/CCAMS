@@ -826,7 +826,7 @@ void CCAMS::DoInitialLoad(future<string> & fmessage)
 		string DisplayMsg = "Update string downloaded: " + message;
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
-		if (regex_match(message, match, regex("(\\d+)[:](\\d+)[:]([A-Z,]+)[:]([^:]+)", regex::icase)))
+		if (regex_match(message, match, regex("(\\d+)[:](\\d+)[:]([A-Z,]+)[:]([^:]+)$", regex::icase)))
 		{
 			std::vector<int> EuroScopeVersion = GetExeVersion();
 
@@ -851,7 +851,7 @@ void CCAMS::DoInitialLoad(future<string> & fmessage)
 				DisplayUserMessage(MY_PLUGIN_NAME, "Update", "An update for the CCAMS plugin is available. Please visit https://github.com/kusterjs/CCAMS/releases and download the latest version.", true, true, false, true, false);
 			}
 			
-			EquipmentCodesFAA = match[3].str();
+			//EquipmentCodesFAA = match[3].str();
 			ModeSAirports = regex(match[4].str(), regex::icase);
 		}
 		else
