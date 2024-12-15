@@ -14,9 +14,9 @@ using namespace EuroScopePlugIn;
 
 #define MY_PLUGIN_NAME			"CCAMS"
 #ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.4.0 DEV"
+#define MY_PLUGIN_VERSION		"2.4.3 DEV"
 #else
-#define MY_PLUGIN_VERSION		"2.4.0"
+#define MY_PLUGIN_VERSION		"2.4.3"
 #endif
 #define MY_PLUGIN_VERSIONCODE		14
 #ifdef USE_HTTPLIB
@@ -78,7 +78,7 @@ public:
 	explicit CCAMS(const EquipmentCodes&& ec = EquipmentCodes(), const SquawkCodes&& sc = SquawkCodes());
 	virtual ~CCAMS();
 
-	bool OnCompileCommand(const char* command);
+	bool OnCompileCommand(const char* sCommandLine);
 	void OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget,
 					  int ItemCode,
 					  int TagData,
@@ -99,7 +99,9 @@ public:
 
 	void OnTimer(int Counter);
 
-	bool PluginCommands(const char* Command);
+	bool PluginCommands(cmatch Command);
+	std::vector<int> GetExeVersion();
+	string EuroScopeVersion();
 
 private:
 	future<string> fUpdateString;
@@ -116,7 +118,7 @@ private:
 	bool acceptEquipmentICAO;
 	bool acceptEquipmentFAA;
 	bool updateOnStartTracking;
-	bool autoAssign;
+	int autoAssign;
 	int APTcodeMaxGS;
 	int APTcodeMaxDist;
 
@@ -130,7 +132,7 @@ private:
 	bool IsApModeS(const string& icao) const;
 	bool IsEHS(const CFlightPlan& FlightPlan) const;
 	bool HasEquipment(const CFlightPlan& FlightPlan, bool acceptEquipmentFAA, bool acceptEquipmentICAO, string CodesICAO) const;
-	double GetDistanceFromOrigin(const CFlightPlan & FlightPlan) const;
+	double GetDistanceFromOrigin(const CFlightPlan& FlightPlan) const;
 	bool IsADEPvicinity(const CFlightPlan& FlightPlan) const;
 	bool IsEligibleSquawkModeS(const CFlightPlan& FlightPlan) const;
 	bool HasValidSquawk(const CFlightPlan& FlightPlan);
