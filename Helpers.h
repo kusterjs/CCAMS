@@ -2,17 +2,14 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <WinInet.h>
-#include <algorithm>
-#include <cctype>
-#include <locale>
-#include <EuroScopePlugIn.h>
 #include "CCAMS.h"
 
 #ifdef USE_HTTPLIB
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>
 #include <Windows.h>
+#else
+#include <WinInet.h>
 #endif
 
 using namespace std;

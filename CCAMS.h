@@ -3,10 +3,7 @@
 #include <string>
 #include <regex>
 #include <future>
-#include <thread>
 #include <map>
-#include <cstdio>
-#include <EuroScopePlugIn.h>
 #include "Helpers.h"
 
 using namespace std;
