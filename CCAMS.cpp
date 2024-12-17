@@ -391,19 +391,19 @@ void CCAMS::OnFlightPlanFlightPlanDataUpdate(CFlightPlan FlightPlan)
 #endif
 		}
 	}
-	else if (FlightPlan.GetTrackingControllerIsMe())
-	{
-		if (autoAssign > 0 && pluginVersionCheck && ConnectionState > 10)
-		{
-#ifdef _DEBUG
-			log << FlightPlan.GetCallsign() << ":FP processed for automatic squawk assignment:flight plan update and controller is tracking";
-			writeLogFile(log);
-			string DisplayMsg = string{ FlightPlan.GetCallsign() } + " is processed for automatic squawk assignment (due to flight plan update and controller is tracking)";
-			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, true, false, false, false);
-#endif
-			AssignAutoSquawk(FlightPlan);
-		}
-	}
+//	else if (FlightPlan.GetTrackingControllerIsMe())
+//	{
+//		if (autoAssign > 0 && pluginVersionCheck && ConnectionState > 10)
+//		{
+//#ifdef _DEBUG
+//			log << FlightPlan.GetCallsign() << ":FP processed for automatic squawk assignment:flight plan update and controller is tracking";
+//			writeLogFile(log);
+//			string DisplayMsg = string{ FlightPlan.GetCallsign() } + " is processed for automatic squawk assignment (due to flight plan update and controller is tracking)";
+//			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, true, false, false, false);
+//#endif
+//			AssignAutoSquawk(FlightPlan);
+//		}
+//	}
 }
 
 void CCAMS::OnFlightPlanFlightStripPushed(CFlightPlan FlightPlan, const char* sSenderController, const char* sTargetController)
@@ -532,6 +532,9 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 
 void CCAMS::OnTimer(int Counter)
 {
+#ifdef _DEBUG
+	stringstream log;
+#endif
 	if (fUpdateString.valid() && fUpdateString.wait_for(0ms) == future_status::ready)
 		DoInitialLoad(fUpdateString);
 
@@ -563,6 +566,8 @@ void CCAMS::OnTimer(int Counter)
 		else if (!(Counter % autoAssign))
 		{
 #ifdef _DEBUG
+			log << "AutoAssignTimer:Starting automatic squawk assignments";
+			writeLogFile(log);
 			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Starting timer-based automatic squawk assignments", true, false, false, false, false);
 #endif // _DEBUG
 
