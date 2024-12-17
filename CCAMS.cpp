@@ -46,7 +46,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 	fUpdateString = async(LoadUpdateString, EuroScopeVersion());
 
 	// Set default setting values
-	ConnectionStatus = 0;
+	ConnectionState = 0;
 	pluginVersionCheck = false;
 	acceptEquipmentICAO = true;
 	acceptEquipmentFAA = true;
@@ -393,7 +393,7 @@ void CCAMS::OnFlightPlanFlightPlanDataUpdate(CFlightPlan FlightPlan)
 	}
 	else if (FlightPlan.GetTrackingControllerIsMe())
 	{
-		if (autoAssign > 0 && pluginVersionCheck && ConnectionStatus > 10)
+		if (autoAssign > 0 && pluginVersionCheck && ConnectionState > 10)
 		{
 #ifdef _DEBUG
 			log << FlightPlan.GetCallsign() << ":FP processed for automatic squawk assignment:flight plan update and controller is tracking";
@@ -500,7 +500,12 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 				PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk,
 					EuroScopeVersion(), FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
 #ifdef _DEBUG
-				if (GetConnectionType() > 2)
+				if (GetConnectionType() == 4)
+				{
+					string DisplayMsg{ "A request for a replay session has been detected: " + string { FlightPlan.GetCallsign() } };
+					DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+				}
+				else if (GetConnectionType() > 2)
 				{
 					string DisplayMsg{ "A request for a simulated aircraft has been detected: " + string { FlightPlan.GetCallsign() } };
 					DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
@@ -530,11 +535,11 @@ void CCAMS::OnTimer(int Counter)
 	if (fUpdateString.valid() && fUpdateString.wait_for(0ms) == future_status::ready)
 		DoInitialLoad(fUpdateString);
 
-	if (GetConnectionType() > 0)
-		ConnectionStatus++;
-	else if (GetConnectionType() != ConnectionStatus)
+	if (GetConnectionType() > 0 && GetConnectionType() != 4)
+		ConnectionState++;
+	else if (GetConnectionType() != ConnectionState)
 	{
-		ConnectionStatus = 0;
+		ConnectionState = 0;
 		if (ProcessedFlightPlans.size() > 0)
 		{
 			ProcessedFlightPlans.clear();
@@ -545,7 +550,7 @@ void CCAMS::OnTimer(int Counter)
 	}
 
 #ifdef _DEBUG
-	if (ConnectionStatus == 10)
+	if (ConnectionState == 10)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Active connection established, automatic squawk assignment enabled", true, false, false, false, false);
 #endif
 
@@ -553,19 +558,18 @@ void CCAMS::OnTimer(int Counter)
 	{
 		AssignPendingSquawks();
 
-		if (autoAssign > 0 && pluginVersionCheck && ConnectionStatus > 10)
+		if (autoAssign == 0 || !pluginVersionCheck || ConnectionState < 10)
+			return;
+		else if (!(Counter % autoAssign))
 		{
-			if (!(Counter % autoAssign))
-			{
 #ifdef _DEBUG
-				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Starting timer-based auto-assignments", true, false, false, false, false);
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Starting timer-based automatic squawk assignments", true, false, false, false, false);
 #endif // _DEBUG
 
-				for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
-					RadarTarget = RadarTargetSelectNext(RadarTarget))
-				{
-					AssignAutoSquawk(RadarTarget.GetCorrelatedFlightPlan());
-				}
+			for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
+				RadarTarget = RadarTargetSelectNext(RadarTarget))
+			{
+				AssignAutoSquawk(RadarTarget.GetCorrelatedFlightPlan());
 			}
 		}
 	}

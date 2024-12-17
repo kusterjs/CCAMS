@@ -113,7 +113,7 @@ private:
 	string EquipmentCodesICAOEHS;
 	const char* squawkModeS;
 	const char* squawkVFR;
-	int ConnectionStatus;
+	int ConnectionState;
 	bool pluginVersionCheck;
 	bool acceptEquipmentICAO;
 	bool acceptEquipmentFAA;
