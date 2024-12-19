@@ -651,20 +651,19 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 		if (FlightPlan.GetTrackingControllerIsMe())
 		{
 			// attempting to change to squawk of the other aircraft
-			for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
-				RadarTarget = RadarTargetSelectNext(RadarTarget))
+			for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
 			{
-				if (_stricmp(RadarTarget.GetCallsign(), FlightPlan.GetCallsign()) == 0)
+				if (_stricmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0)
 					continue;
-				else if (_stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0
-					&& strlen(RadarTarget.GetCorrelatedFlightPlan().GetTrackingControllerCallsign()) > 0)
+				else if (_stricmp(FP.GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0
+					&& strlen(FP.GetTrackingControllerCallsign()) == 0)
 				{
-					PendingSquawks.insert(std::make_pair(RadarTarget.GetCallsign(), std::async(LoadWebSquawk, EuroScopeVersion(),
-						RadarTarget.GetCorrelatedFlightPlan(), ControllerMyself(), collectUsedCodes(RadarTarget.GetCorrelatedFlightPlan()), IsADEPvicinity(RadarTarget.GetCorrelatedFlightPlan()), GetConnectionType())));
+					PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, EuroScopeVersion(),
+						FP, ControllerMyself(), collectUsedCodes(FP), IsADEPvicinity(FP), GetConnectionType())));
 #ifdef _DEBUG
-					log << RadarTarget.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
+					log << FP.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
 					writeLogFile(log);
-					DisplayMsg = string{ RadarTarget.GetCallsign() } + ", unique code AUTO assigned due to a detected duplicate with " + FlightPlan.GetCallsign();
+					DisplayMsg = string{ FP.GetCallsign() } + ", unique code AUTO assigned due to a detected duplicate with " + FlightPlan.GetCallsign();
 					DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 				}
