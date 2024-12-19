@@ -11,9 +11,9 @@ using namespace EuroScopePlugIn;
 
 #define MY_PLUGIN_NAME			"CCAMS"
 #ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.4.6 DEV"
+#define MY_PLUGIN_VERSION		"2.4.7 DEV"
 #else
-#define MY_PLUGIN_VERSION		"2.4.6"
+#define MY_PLUGIN_VERSION		"2.4.7"
 #endif
 #define MY_PLUGIN_VERSIONCODE		15
 #ifdef USE_HTTPLIB
@@ -100,6 +100,9 @@ public:
 
 	bool PluginCommands(cmatch Command);
 
+	bool IsADEPvicinity(const CFlightPlan& FlightPlan) const;
+	vector<const char*> collectUsedCodes(const CFlightPlan& FlightPlan);
+
 private:
 	future<string> fUpdateString;
 	vector<string> ProcessedFlightPlans;
@@ -131,12 +134,10 @@ private:
 	bool IsEHS(const CFlightPlan& FlightPlan) const;
 	bool HasEquipment(const CFlightPlan& FlightPlan, bool acceptEquipmentFAA, bool acceptEquipmentICAO, string CodesICAO) const;
 	double GetDistanceFromOrigin(const CFlightPlan& FlightPlan) const;
-	bool IsADEPvicinity(const CFlightPlan& FlightPlan) const;
 	bool IsEligibleSquawkModeS(const CFlightPlan& FlightPlan) const;
 	bool HasValidSquawk(const CFlightPlan& FlightPlan);
 
 	map<const char*, future<string>> PendingSquawks;
-	vector<const char*> collectUsedCodes(const CFlightPlan& FlightPlan);
 
 #ifdef _DEBUG
 	void writeLogFile(stringstream& sText);
