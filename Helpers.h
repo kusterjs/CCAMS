@@ -20,7 +20,7 @@ using namespace EuroScopePlugIn;
 #define EXTERNAL_FUNCTION_H
 
 class CCAMS;
-string LoadWebSquawk(CCAMS& ccams);
+string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan);
 
 #endif // EXTERNAL_FUNCTION_H
 

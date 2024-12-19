@@ -49,35 +49,35 @@ string LoadUpdateString()
 
 #ifdef USE_HTTPLIB
 /* NEW HTTPLIB Client implementation */
-string LoadWebSquawk(CCAMS& ccams)
+string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
 {
 	string codes;
-	for (size_t i = 0; i < usedCodes.size(); i++)
+	for (size_t i = 0; i < ccams.collectUsedCodes(FlightPlan).size(); i++)
 	{
 		if (i > 0)
 			codes += "~";
-		codes += usedCodes[i];
+		codes += ccams.collectUsedCodes(FlightPlan)[i];
 	}
 
-	string query_string = "callsign=" + string(ATCO.GetCallsign());
-	if (FP.IsValid())
+	string query_string = "callsign=" + string(ccams.ControllerMyself().GetCallsign());
+	if (FlightPlan.IsValid())
 	{
-		if (vicinityADEP)
+		if (ccams.IsADEPvicinity(FlightPlan))
 		{
-			query_string += "&orig=" + string(FP.GetFlightPlanData().GetOrigin());
+			query_string += "&orig=" + string(FlightPlan.GetFlightPlanData().GetOrigin());
 		}
-		query_string += "&dest=" + string(FP.GetFlightPlanData().GetDestination()) +
-			"&flightrule=" + string(FP.GetFlightPlanData().GetPlanType());
+		query_string += "&dest=" + string(FlightPlan.GetFlightPlanData().GetDestination()) +
+			"&flightrule=" + string(FlightPlan.GetFlightPlanData().GetPlanType());
 
-		if (FP.GetCorrelatedRadarTarget().IsValid())
-			if (FP.GetCorrelatedRadarTarget().GetPosition().IsValid())
-				query_string += "&latitude=" + to_string(FP.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Latitude) +
-					"&longitude=" + to_string(FP.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Longitude);
+		if (FlightPlan.GetCorrelatedRadarTarget().IsValid())
+			if (FlightPlan.GetCorrelatedRadarTarget().GetPosition().IsValid())
+				query_string += "&latitude=" + to_string(FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Latitude) +
+					"&longitude=" + to_string(FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Longitude);
 
-		query_string += "&connectiontype=" + to_string(ConnectionType);
+		query_string += "&connectiontype=" + to_string(ccams.GetConnectionType());
 
 #ifndef _DEBUG
-		if (ConnectionType > 2)
+		if (ccams.GetConnectionType() > 2)
 		{
 			query_string += "&sim";
 		}
@@ -107,7 +107,7 @@ string LoadWebSquawk(CCAMS& ccams)
 	return answer;
 }
 #else
-string LoadWebSquawk(CCAMS& ccams)
+string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
 {
 	//PluginData p;
 	//const string AGENT{ "EuroScope " + string { MY_PLUGIN_NAME } + "/" + string { MY_PLUGIN_VERSION } };
@@ -133,39 +133,39 @@ string LoadWebSquawk(CCAMS& ccams)
 	}
 
 	//cpr::Response r = cpr::Get(cpr::Url{ "http://localhost/webtools/CCAMS/squawk" },
-	//	cpr::Parameters{ {"callsign", ATCO.GetCallsign()} });
+	//	cpr::Parameters{ {"callsign", ccams.ControllerMyself().GetCallsign()} });
 	//if (r.status_code != 200)
 	//	return "CURL ERROR";
 
 
 	string codes;
-	for (size_t i = 0; i < ccams.usedCodes.size(); i++)
+	for (size_t i = 0; i < ccams.collectUsedCodes(FlightPlan).size(); i++)
 	{
 		if (i > 0)
 			codes += ",";
-		codes += usedCodes[i];
+		codes += ccams.collectUsedCodes(FlightPlan)[i];
 	}
 
-	//string build_url = "http://localhost/webtools/CCAMS/squawk?callsign=" + string(ATCO.GetCallsign());
-	string build_url = "https://ccams.kilojuliett.ch/squawk?callsign=" + string(ATCO.GetCallsign());
-	if (FP.IsValid())
+	//string build_url = "http://localhost/webtools/CCAMS/squawk?callsign=" + string(ccams.ControllerMyself().GetCallsign());
+	string build_url = "https://ccams.kilojuliett.ch/squawk?callsign=" + string(ccams.ControllerMyself().GetCallsign());
+	if (FlightPlan.IsValid())
 	{
-		if (vicinityADEP)
+		if (ccams.IsADEPvicinity(FlightPlan))
 		{
-			build_url += "&orig=" + string(FP.GetFlightPlanData().GetOrigin());
+			build_url += "&orig=" + string(FlightPlan.GetFlightPlanData().GetOrigin());
 		}
-		build_url += "&dest=" + string(FP.GetFlightPlanData().GetDestination()) +
-			"&flightrule=" + string(FP.GetFlightPlanData().GetPlanType());
+		build_url += "&dest=" + string(FlightPlan.GetFlightPlanData().GetDestination()) +
+			"&flightrule=" + string(FlightPlan.GetFlightPlanData().GetPlanType());
 
-		if (FP.GetCorrelatedRadarTarget().IsValid())
-			if (FP.GetCorrelatedRadarTarget().GetPosition().IsValid())
-				build_url += "&latitude=" + to_string(FP.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Latitude) +
-				"&longitude=" + to_string(FP.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Longitude);
+		if (FlightPlan.GetCorrelatedRadarTarget().IsValid())
+			if (FlightPlan.GetCorrelatedRadarTarget().GetPosition().IsValid())
+				build_url += "&latitude=" + to_string(FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Latitude) +
+				"&longitude=" + to_string(FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Longitude);
 
-		build_url += "&connectiontype=" + to_string(ConnectionType);
+		build_url += "&connectiontype=" + to_string(ccams.GetConnectionType());
 
 #ifndef _DEBUG
-		if (ConnectionType > 2)
+		if (ccams.GetConnectionType() > 2)
 		{
 			build_url += "&sim";
 		}
