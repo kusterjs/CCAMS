@@ -3,9 +3,9 @@
 
 #ifdef USE_HTTPLIB
 /* NEW HTTPLIB Client implementation */
-string LoadUpdateString(string EuroScopeVersion)
+string LoadUpdateString()
 {
-	const string AGENT{ "EuroScope " + (string)EuroScopeVersion + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION};
+	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION};
 
 	httplib::Client cli(MY_PLUGIN_UPDATE_BASE);
 	auto res = cli.Get(MY_PLUGIN_UPDATE_ENDPOINT);
@@ -21,9 +21,9 @@ string LoadUpdateString(string EuroScopeVersion)
 	return res->body;
 }
 #else
-string LoadUpdateString(string EuroScopeVersion)
+string LoadUpdateString()
 {
-	const string AGENT{ "EuroScope " + (string)EuroScopeVersion + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION };
+	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION};
 	HINTERNET connect = InternetOpen(AGENT.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if (!connect) {
 		throw error{ string {"Connection failed to verify the plugin version. Error: " + to_string(GetLastError()) } };
@@ -49,7 +49,7 @@ string LoadUpdateString(string EuroScopeVersion)
 
 #ifdef USE_HTTPLIB
 /* NEW HTTPLIB Client implementation */
-string LoadWebSquawk(string EuroScopeVersion, EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType)
+string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType)
 {
 	string codes;
 	for (size_t i = 0; i < usedCodes.size(); i++)
@@ -88,7 +88,7 @@ string LoadWebSquawk(string EuroScopeVersion, EuroScopePlugIn::CFlightPlan FP, E
 		query_string += "&codes=" + codes;
 	}
 	httplib::Headers headers = {
-		{"User-Agent", "EuroScope " + (string)EuroScopeVersion + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION }
+		{"User-Agent", "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION}
 	};
 
 	httplib::Client client(MY_PLUGIN_APP_BASE);
@@ -107,11 +107,11 @@ string LoadWebSquawk(string EuroScopeVersion, EuroScopePlugIn::CFlightPlan FP, E
 	return answer;
 }
 #else
-string LoadWebSquawk(string EuroScopeVersion, EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType)
+string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType)
 {
 	//PluginData p;
 	//const string AGENT{ "EuroScope " + string { MY_PLUGIN_NAME } + "/" + string { MY_PLUGIN_VERSION } };
-	const string AGENT{ "EuroScope " + (string)EuroScopeVersion + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION };
+	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION};
 	HINTERNET connect = InternetOpen(AGENT.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if (!connect) {
 #ifdef _DEBUG
@@ -203,3 +203,53 @@ string LoadWebSquawk(string EuroScopeVersion, EuroScopePlugIn::CFlightPlan FP, E
 	return answer;
 }
 #endif
+
+std::vector<int> GetExeVersion() {
+	// Get the path of the executable
+	char exePath[MAX_PATH];
+	if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) == 0) {
+		return {}; // Return an empty vector on failure
+	}
+
+	// Get the size of the version info resource
+	DWORD handle = 0; // Explicitly initialize handle
+	DWORD versionInfoSize = GetFileVersionInfoSizeA(exePath, &handle);
+	if (versionInfoSize == 0) {
+		return {}; // Return an empty vector on failure
+	}
+
+	// Allocate memory to hold the version info
+	std::vector<char> versionInfo(versionInfoSize);
+	if (!GetFileVersionInfoA(exePath, handle, versionInfoSize, versionInfo.data())) {
+		return {}; // Return an empty vector on failure
+	}
+
+	// Extract the fixed file info
+	VS_FIXEDFILEINFO* fileInfo = nullptr;
+	UINT fileInfoSize = 0;
+	if (!VerQueryValueA(versionInfo.data(), "\\", reinterpret_cast<LPVOID*>(&fileInfo), &fileInfoSize)) {
+		return {}; // Return an empty vector on failure
+	}
+
+	if (fileInfo) {
+		// Extract version information and return as an array
+		return {
+			static_cast<int>(HIWORD(fileInfo->dwFileVersionMS)), // Major
+			static_cast<int>(LOWORD(fileInfo->dwFileVersionMS)), // Minor
+			static_cast<int>(HIWORD(fileInfo->dwFileVersionLS)), // Build
+			static_cast<int>(LOWORD(fileInfo->dwFileVersionLS))  // Revision
+		};
+	}
+
+	return {}; // Return an empty vector if no version info is available
+}
+
+string EuroScopeVersion()
+{
+	std::vector<int> version = GetExeVersion();
+	if (!version.empty())
+		return to_string(version[0]) + "." + to_string(version[1]) + "." + to_string(version[2]) + "." + to_string(version[3]);
+
+	return "{NO VERSION DATA}";
+}
+

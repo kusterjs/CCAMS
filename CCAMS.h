@@ -99,8 +99,6 @@ public:
 	void OnTimer(int Counter);
 
 	bool PluginCommands(cmatch Command);
-	std::vector<int> GetExeVersion();
-	string EuroScopeVersion();
 
 private:
 	future<string> fUpdateString;
