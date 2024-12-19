@@ -1076,11 +1076,11 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 
 		if (strlen(assr) == 4)
 		{
-			if (strcmp(assr, RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk()) == 0 || strcmp(assr, RadarTarget.GetPosition().GetSquawk()) == 0)
+			if (strcmp(assr, RadarTarget.GetPosition().GetSquawk()) == 0)
 			{
 				// duplicate identified for the assigned code
 #ifdef _DEBUG
-				DisplayMsg = "ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used by " + RadarTarget.GetCallsign();
+				DisplayMsg = "RadarTarget DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used by " + RadarTarget.GetCallsign();
 				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 				return false;
@@ -1088,11 +1088,11 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 		}
 		else
 		{
-			if (strcmp(pssr, RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk()) == 0 || strcmp(pssr, RadarTarget.GetPosition().GetSquawk()) == 0)
+			if (strcmp(pssr, RadarTarget.GetPosition().GetSquawk()) == 0)
 			{
 				// duplicate identified for the actual set code
 #ifdef _DEBUG
-				DisplayMsg = "SET code '" + string{ pssr } + "' of " + FlightPlan.GetCallsign() + " is already used by " + RadarTarget.GetCallsign();
+				DisplayMsg = "RadarTarget DUPE: SET code '" + string{ pssr } + "' of " + FlightPlan.GetCallsign() + " is already used by " + RadarTarget.GetCallsign();
 				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 				return false;
@@ -1113,11 +1113,11 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 
 		if (strlen(assr) == 4)
 		{
-			if (strcmp(assr, FP.GetControllerAssignedData().GetSquawk()) == 0 || strcmp(assr, FP.GetCorrelatedRadarTarget().GetPosition().GetSquawk()) == 0)
+			if (strcmp(assr, FP.GetControllerAssignedData().GetSquawk()) == 0)
 			{
 				// duplicate identified for the assigned code
 #ifdef _DEBUG
-				DisplayMsg = "ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
+				DisplayMsg = "FP DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
 				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 				return false;
@@ -1125,11 +1125,11 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 		}
 		else
 		{
-			if (strcmp(pssr, FP.GetControllerAssignedData().GetSquawk()) == 0 || strcmp(pssr, FP.GetCorrelatedRadarTarget().GetPosition().GetSquawk()) == 0)
+			if (strcmp(pssr, FP.GetControllerAssignedData().GetSquawk()) == 0)
 			{
 				// duplicate identified for the actual set code
 #ifdef _DEBUG
-				DisplayMsg = "SET code '" + string{ pssr } + "' of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
+				DisplayMsg = "FP DUPE: SET code '" + string{ pssr } + "' of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
 				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 				return false;
