@@ -49,7 +49,7 @@ string LoadUpdateString()
 
 #ifdef USE_HTTPLIB
 /* NEW HTTPLIB Client implementation */
-string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType)
+string LoadWebSquawk(CCAMS& ccams)
 {
 	string codes;
 	for (size_t i = 0; i < usedCodes.size(); i++)
@@ -107,7 +107,7 @@ string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CControll
 	return answer;
 }
 #else
-string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType)
+string LoadWebSquawk(CCAMS& ccams)
 {
 	//PluginData p;
 	//const string AGENT{ "EuroScope " + string { MY_PLUGIN_NAME } + "/" + string { MY_PLUGIN_VERSION } };
@@ -139,7 +139,7 @@ string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CControll
 
 
 	string codes;
-	for (size_t i = 0; i < usedCodes.size(); i++)
+	for (size_t i = 0; i < ccams.usedCodes.size(); i++)
 	{
 		if (i > 0)
 			codes += ",";

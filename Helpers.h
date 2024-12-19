@@ -16,9 +16,15 @@ using namespace std;
 using namespace EuroScopePlugIn;
 
 
-string LoadUpdateString();
+#ifndef EXTERNAL_FUNCTION_H
+#define EXTERNAL_FUNCTION_H
 
-string LoadWebSquawk(CFlightPlan FP, CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType);
+class CCAMS;
+string LoadWebSquawk(CCAMS& ccams);
+
+#endif // EXTERNAL_FUNCTION_H
+
+string LoadUpdateString();
 
 vector<int> GetExeVersion();
 string EuroScopeVersion();
