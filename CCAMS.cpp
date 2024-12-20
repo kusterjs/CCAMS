@@ -630,13 +630,15 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 		if (FlightPlan.GetTrackingControllerIsMe())
 		{
 			if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) == ProcessedFlightPlans.end())
+			{
 				ProcessedFlightPlans.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
-			log << FlightPlan.GetCallsign() << ":FP processed:has already a valid squawk:" << assr << ":" << pssr;
-			writeLogFile(log);
-			DisplayMsg = string{ FlightPlan.GetCallsign() } + " processed because it has already a valid squawk (ASSIGNED '" + assr + "', SET " + pssr + ")";
-			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+				log << FlightPlan.GetCallsign() << ":FP processed:has already a valid squawk:" << assr << ":" << pssr;
+				writeLogFile(log);
+				DisplayMsg = string{ FlightPlan.GetCallsign() } + " processed because it has already a valid squawk (ASSIGNED '" + assr + "', SET " + pssr + ")";
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
+			}
 		}
 		// if this flight is not tracked by the current controller yet, it is kept for revalidation in the next round
 
@@ -653,9 +655,17 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 			{
 				if (_stricmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0)
 					continue;
-				else if (_stricmp(FP.GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0
-					&& strlen(FP.GetTrackingControllerCallsign()) == 0)
+				else if (_stricmp(FP.GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0)
 				{
+					if (FP.GetTrackingControllerIsMe())
+						break;
+					else if (strlen(FP.GetTrackingControllerCallsign()) > 0)
+						break; // this will require a new code for the processed flight
+					else if (strlen(FP.GetFlightPlanData().GetOrigin()) < 4 || strlen(FP.GetFlightPlanData().GetDestination()) < 4 || FP.GetCorrelatedRadarTarget().GetGS() < APTcodeMaxGS)
+						break;
+					else if (IsADEPvicinity(FP) || FP.GetDistanceToDestination() < APTcodeMaxDist)
+						break;
+
 					PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FP)));
 #ifdef _DEBUG
 					log << FP.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
