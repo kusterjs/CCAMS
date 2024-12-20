@@ -401,7 +401,8 @@ void CCAMS::OnFlightPlanFlightPlanDataUpdate(CFlightPlan FlightPlan)
 //			string DisplayMsg = string{ FlightPlan.GetCallsign() } + " is processed for automatic squawk assignment (due to flight plan update and controller is tracking)";
 //			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, true, false, false, false);
 //#endif
-//			AssignAutoSquawk(FlightPlan);
+//			if (FlightPlan.GetCorrelatedRadarTarget().IsValid())
+//				AssignAutoSquawk(FlightPlan);
 //		}
 //	}
 }
@@ -596,7 +597,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	{
 		// disregard simulated flight plans (out of the controllers range)
 		// disregard flight with flight rule VFR
-		if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
+		if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) == ProcessedFlightPlans.end())
 		{
 			ProcessedFlightPlans.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
@@ -611,7 +612,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	else if (FlightPlan.GetFlightPlanData().IsReceived() && FlightPlan.GetSectorEntryMinutes() < 0)
 	{
 		// the flight will never enter the sector of the current controller
-		if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
+		if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) == ProcessedFlightPlans.end())
 		{
 			ProcessedFlightPlans.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
@@ -625,19 +626,17 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	}
 	else if (HasValidSquawk(FlightPlan))
 	{
-		// this flight has already assigned a valid unique code
+		// this flight has already assigned a valid code
 		if (FlightPlan.GetTrackingControllerIsMe())
 		{
-			{
-				if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
-					ProcessedFlightPlans.push_back(FlightPlan.GetCallsign());
+			if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) == ProcessedFlightPlans.end())
+				ProcessedFlightPlans.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
-				log << FlightPlan.GetCallsign() << ":FP processed:has already a valid squawk:" << assr << ":" << pssr;
-				writeLogFile(log);
-				DisplayMsg = string{ FlightPlan.GetCallsign() } + " processed because it has already a valid squawk (ASSIGNED '" + assr + "', SET " + pssr + ")";
-				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+			log << FlightPlan.GetCallsign() << ":FP processed:has already a valid squawk:" << assr << ":" << pssr;
+			writeLogFile(log);
+			DisplayMsg = string{ FlightPlan.GetCallsign() } + " processed because it has already a valid squawk (ASSIGNED '" + assr + "', SET " + pssr + ")";
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
-			}
 		}
 		// if this flight is not tracked by the current controller yet, it is kept for revalidation in the next round
 
