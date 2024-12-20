@@ -846,17 +846,16 @@ void CCAMS::DoInitialLoad(future<string> & fmessage)
 			if (EuroScopeVersion[0] == 3)
 			{
 				if (EuroScopeVersion[1] < 2 || EuroScopeVersion[2] < 2)
-				{
 					DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope is not supported due to authentification requirements. Please visit https://forum.vatsim.net/t/euroscope-mandatory-update-authentication-changes/5643 for more information.", true, true, false, true, false);
-				}
-				else if (EuroScopeVersion[2] > 3)
-				{
-					DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope does not provide reliable aircraft equipment code information. Mode S eligibility detection is depreciated and the automatic code assignment therefore not available.", true, true, false, true, false);
-				}
 				else if (stoi(match[2].str(), nullptr, 0) > MY_PLUGIN_VERSIONCODE)
 					throw error{ "Your " + string { MY_PLUGIN_NAME } + " plugin (version " + MY_PLUGIN_VERSION + ") is outdated and the automatic code assignment therefore not available. Please change to the latest version.\n\nVisit https://github.com/kusterjs/CCAMS/releases" };
 				else
+				{
+					if (EuroScopeVersion[2] > 3)
+						DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope may provide unreliable aircraft equipment code information. Deactivate the automatic code assignment if Mode S equipped aircraft are not detected correctly.", true, true, false, true, false);
+
 					pluginVersionCheck = true;
+				}
 			}
 
 			if (stoi(match[1].str(), nullptr, 0) > MY_PLUGIN_VERSIONCODE)
