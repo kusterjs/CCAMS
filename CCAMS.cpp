@@ -485,6 +485,10 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 		break;
 	case ItemCodes::TAG_FUNC_ASSIGN_SQUAWK:
 		FlightPlan.GetControllerAssignedData().SetSquawk(sItemString);
+		
+		if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) == ProcessedFlightPlans.end())
+			ProcessedFlightPlans.push_back(FlightPlan.GetCallsign());
+
 		break;
 	case ItemCodes::TAG_FUNC_ASSIGN_SQUAWK_AUTO:
 		if (IsEligibleSquawkModeS(FlightPlan))
@@ -557,11 +561,11 @@ void CCAMS::OnTimer(int Counter)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Active connection established, automatic squawk assignment enabled", true, false, false, false, false);
 #endif
 
-	if (ControllerMyself().IsValid() && ControllerMyself().IsController())
+	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && ConnectionState > 10)
 	{
 		AssignPendingSquawks();
 
-		if (autoAssign == 0 || !pluginVersionCheck || ConnectionState < 10)
+		if (autoAssign == 0 || !pluginVersionCheck || ControllerMyself().GetRating() < 2 || (ControllerMyself().GetFacility() > 1 && ControllerMyself().GetFacility() < 5))
 			return;
 		else if (!(Counter % autoAssign))
 		{
@@ -590,8 +594,8 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	const char* pssr = FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetSquawk();
 
 	// check controller class validity and qualification, restrict to APP/CTR/FSS controller types and respect a minimum connection duration (time)
-	if (!ControllerMyself().IsValid() || !ControllerMyself().IsController() || ControllerMyself().GetRating() < 2 || (ControllerMyself().GetFacility() > 1 && ControllerMyself().GetFacility() < 5))
-		return;
+	//if (!ControllerMyself().IsValid() || !ControllerMyself().IsController())
+	//	return;
 
 	if (FlightPlan.GetSimulated() || strcmp(FlightPlan.GetFlightPlanData().GetPlanType(), "V") == 0)
 	{
@@ -679,13 +683,13 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 		}
 
 		// removing the call sign from the processed flight plan list to initiate a new assignment
-		ProcessedFlightPlans.erase(remove(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()), ProcessedFlightPlans.end());
-#ifdef _DEBUG
-		log << FlightPlan.GetCallsign() << ":duplicate assigned code:FP removed from processed list";
-		writeLogFile(log);
-		string DisplayMsg = string{ FlightPlan.GetCallsign() } + " removed from processed list because the assigned code is no longer valid";
-		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif
+//		ProcessedFlightPlans.erase(remove(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()), ProcessedFlightPlans.end());
+//#ifdef _DEBUG
+//		log << FlightPlan.GetCallsign() << ":duplicate assigned code:FP removed from processed list";
+//		writeLogFile(log);
+//		string DisplayMsg = string{ FlightPlan.GetCallsign() } + " removed from processed list because the assigned code is no longer valid";
+//		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+//#endif
 	}
 	else
 	{
