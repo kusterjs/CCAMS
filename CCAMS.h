@@ -128,6 +128,7 @@ private:
 	void AssignPendingSquawks();
 	void DoInitialLoad(future<string> & message);
 	void ReadSettings();
+
 	bool IsFlightPlanProcessed(CFlightPlan& FlightPlan);
 	bool IsAcModeS(const CFlightPlan& FlightPlan) const;
 	bool IsApModeS(const string& icao) const;
@@ -136,6 +137,9 @@ private:
 	double GetDistanceFromOrigin(const CFlightPlan& FlightPlan) const;
 	bool IsEligibleSquawkModeS(const CFlightPlan& FlightPlan) const;
 	bool HasValidSquawk(const CFlightPlan& FlightPlan);
+
+	bool HasDuplicateSquawk(const CFlightPlan& FlightPlan);
+	bool HasDuplicateSquawk(const CRadarTarget& RadarTarget);
 
 	map<const char*, future<string>> PendingSquawks;
 

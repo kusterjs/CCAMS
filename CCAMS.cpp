@@ -1033,6 +1033,93 @@ bool CCAMS::IsEligibleSquawkModeS(const EuroScopePlugIn::CFlightPlan& FlightPlan
 		(IsApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || (!IsADEPvicinity(FlightPlan) && (strlen(FlightPlan.GetTrackingControllerCallsign()) > 0) ? IsApModeS(FlightPlan.GetTrackingControllerCallsign()) : IsApModeS(ControllerMyself().GetCallsign())));
 }
 
+bool CCAMS::HasDuplicateSquawk(const CRadarTarget& RadarTarget)
+{
+	const char* pssr = RadarTarget.GetPosition().GetSquawk();
+	string DisplayMsg;
+
+	for (CRadarTarget RT = RadarTargetSelectFirst(); RT.IsValid();
+		RT = RadarTargetSelectNext(RT))
+	{
+		if (strcmp(RT.GetCallsign(), RadarTarget.GetCallsign()) == 0)
+			continue;
+
+		if (strcmp(pssr, RT.GetPosition().GetSquawk()) == 0)
+		{
+			// duplicate identified for the actual set code
+#ifdef _DEBUG
+			DisplayMsg = "DUPE: SET code " + string{ pssr } + " of " + RadarTarget.GetCallsign() + " is already used (SET) by " + RT.GetCallsign();
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+			return true;
+		}
+	}
+
+	// searching for duplicate assignments in flight plans
+	for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
+	{
+		if (strcmp(FP.GetCallsign(), RadarTarget.GetCallsign()) == 0 || strlen(FP.GetControllerAssignedData().GetSquawk()) != 4)
+			continue;
+
+		if (strcmp(pssr, FP.GetControllerAssignedData().GetSquawk()) == 0)
+		{
+			// duplicate identified for the actual set code
+#ifdef _DEBUG
+			DisplayMsg = "DUPE: SET code " + string{ pssr } + " of " + RadarTarget.GetCallsign() + " is already assigned to " + FP.GetCallsign();
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+			return true;
+		}
+	}
+	return false;
+}
+
+bool CCAMS::HasDuplicateSquawk(const CFlightPlan& FlightPlan)
+{
+	const char* assr = FlightPlan.GetControllerAssignedData().GetSquawk();
+	string DisplayMsg;
+
+	if (strlen(assr) == 4)
+	{
+		// searching for duplicate assignments in radar targets
+		for (CRadarTarget RT = RadarTargetSelectFirst(); RT.IsValid();
+			RT = RadarTargetSelectNext(RT))
+		{
+			if (strcmp(RT.GetCallsign(), FlightPlan.GetCallsign()) == 0)
+				continue;
+
+			if (strcmp(assr, RT.GetPosition().GetSquawk()) == 0)
+			{
+				// duplicate identified for the assigned code
+#ifdef _DEBUG
+				DisplayMsg = "DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used (SET) by " + RT.GetCallsign();
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+				return true;
+			}
+		}
+
+		// searching for duplicate assignments in flight plans
+		for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
+		{
+			if (strcmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0 || strlen(FP.GetControllerAssignedData().GetSquawk()) != 4)
+				continue;
+
+			if (strcmp(assr, FP.GetControllerAssignedData().GetSquawk()) == 0)
+			{
+				// duplicate identified for the assigned code
+#ifdef _DEBUG
+				DisplayMsg = "DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already assigned to " + FP.GetCallsign();
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 {
 	const char* assr = FlightPlan.GetControllerAssignedData().GetSquawk();
@@ -1073,81 +1160,9 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 			return false;
 		}
 	}
-
-	// searching for duplicate assignments in radar targets
-	for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
-		RadarTarget = RadarTargetSelectNext(RadarTarget))
-	{
-		if (strcmp(RadarTarget.GetCallsign(),FlightPlan.GetCallsign()) == 0)
-			continue;
-
-		if (strlen(assr) == 4)
-		{
-			if (strcmp(assr, RadarTarget.GetPosition().GetSquawk()) == 0)
-			{
-				// duplicate identified for the assigned code
-#ifdef _DEBUG
-				DisplayMsg = "RadarTarget DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used by " + RadarTarget.GetCallsign();
-				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif
-				return false;
-			}
-		}
-		else
-		{
-			if (strcmp(pssr, RadarTarget.GetPosition().GetSquawk()) == 0)
-			{
-				// duplicate identified for the actual set code
-#ifdef _DEBUG
-				DisplayMsg = "RadarTarget DUPE: SET code '" + string{ pssr } + "' of " + FlightPlan.GetCallsign() + " is already used by " + RadarTarget.GetCallsign();
-				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif
-				return false;
-			}
-			else
-			{
-				// as an option, if no code has been assigned and the currently used one has not been identified as a dpublicate, it could be set as the assigned code
-				//FlightPlan.GetControllerAssignedData().SetSquawk(pssr);
-			}
-		}
-	}
-
-	// searching for duplicate assignments in flight plans
-	for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
-	{
-		if (strcmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0)
-			continue;
-
-		if (strlen(assr) == 4)
-		{
-			if (strcmp(assr, FP.GetControllerAssignedData().GetSquawk()) == 0)
-			{
-				// duplicate identified for the assigned code
-#ifdef _DEBUG
-				DisplayMsg = "FP DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
-				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif
-				return false;
-			}
-		}
-		else
-		{
-			if (strcmp(pssr, FP.GetControllerAssignedData().GetSquawk()) == 0)
-			{
-				// duplicate identified for the actual set code
-#ifdef _DEBUG
-				DisplayMsg = "FP DUPE: SET code '" + string{ pssr } + "' of " + FlightPlan.GetCallsign() + " is already used by " + FP.GetCallsign();
-				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif
-				return false;
-			}
-			else
-			{
-				// as an option, if no code has been assigned and the currently used one has not been identified as a dpublicate, it could be set as the assigned code
-				//FlightPlan.GetControllerAssignedData().SetSquawk(pssr);
-			}
-		}
-	}
+	
+	if (HasDuplicateSquawk(FlightPlan) || HasDuplicateSquawk(FlightPlan.GetCorrelatedRadarTarget()))
+		return false;
 
 	// no duplicate with assigend or used codes has been found
 #ifdef _DEBUG
