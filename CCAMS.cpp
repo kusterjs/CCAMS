@@ -670,7 +670,8 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 					else if (IsADEPvicinity(FP) || FP.GetDistanceToDestination() < APTcodeMaxDist)
 						break;
 
-					PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FP)));
+					if (PendingSquawks.find(FP.GetCallsign()) == PendingSquawks.end())
+						PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FP)));
 #ifdef _DEBUG
 					log << FP.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
 					writeLogFile(log);
@@ -765,7 +766,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 	}
-	else
+	else if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
 	{
 		PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FlightPlan)));
 #ifdef _DEBUG
