@@ -5,8 +5,6 @@
 /* NEW HTTPLIB Client implementation */
 string LoadUpdateString()
 {
-	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION};
-
 	httplib::Client cli(MY_PLUGIN_UPDATE_BASE);
 	auto res = cli.Get(MY_PLUGIN_UPDATE_ENDPOINT);
 
