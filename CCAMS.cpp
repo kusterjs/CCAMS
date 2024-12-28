@@ -799,52 +799,39 @@ void CCAMS::AssignSquawk(CFlightPlan& FlightPlan)
 
 void CCAMS::AssignPendingSquawks()
 {
-	//string DisplayMsg;
+	string DisplayMsg;
 
-	for (auto it = PendingSquawks.begin(), next_it = it; it != PendingSquawks.end(); it = next_it)
+	for (auto it = PendingSquawks.begin(); it != PendingSquawks.end(); )
 	{
-		bool must_delete = false;
-
-//		if (!FlightPlanSelect(it->first).IsValid())
-//		{
-//#ifdef _DEBUG
-//			DisplayMsg = string{ it->first } + " flight plan no longer valid, removing from pending squawks";
-//			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-//#endif
-//			PendingSquawks.erase(it);
-//		}
-
-		if (it->second.valid() && it->second.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-			std::string squawk = it->second.get();
-			//if (squawk is an error number)
-#ifdef _DEBUG
-			string DisplayMsg = string{ it->first } + ", code " + squawk + " assigned";
-			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif
-			if (!FlightPlanSelect(it->first).GetControllerAssignedData().SetSquawk(squawk.c_str()))
-			{
-				if (squawk == "E404")
-				{
-					DisplayUserMessage(MY_PLUGIN_NAME, "Error 404", "The internet connection cannot be initiated", true, true, false, false, false);
-				}
-				else if (squawk == "E406")
-				{
-					DisplayUserMessage(MY_PLUGIN_NAME, "Error 406", "No answer received from the CCAMS server", true, true, false, false, false);
-				}
-				else
-				{
-					string DisplayMsg{ "Your request for a squawk from the centralised code server failed. Check your plugin version, try again or revert to the ES built-in functionalities for assigning a squawk (F9)." };
-					DisplayUserMessage(MY_PLUGIN_NAME, "Error", DisplayMsg.c_str(), true, true, false, false, false);
-					DisplayUserMessage(MY_PLUGIN_NAME, "Error", ("For troubleshooting, report code '" + squawk + "'").c_str(), true, true, false, false, false);
-				}
-			}
-			must_delete = true;
-		}
-
-		++next_it;
-		if (must_delete)
+		if (it->second.valid() && it->second.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 		{
-			PendingSquawks.erase(it);
+			std::string squawk = it->second.get();
+
+			if (!FlightPlanSelect(it->first).IsValid())
+			{
+#ifdef _DEBUG
+				DisplayMsg = string{ it->first } + " flight plan no longer valid, removing from pending squawks";
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+			}
+			else if (!FlightPlanSelect(it->first).GetControllerAssignedData().SetSquawk(squawk.c_str()))
+			{
+				string DisplayMsg{ "Your request for a squawk from the centralised code server failed. Check your plugin version, try again or revert to the ES built-in functionalities for assigning a squawk (F9)." };
+				DisplayUserMessage(MY_PLUGIN_NAME, "Error", DisplayMsg.c_str(), true, true, false, false, false);
+				DisplayUserMessage(MY_PLUGIN_NAME, "Error", ("For troubleshooting, report error code '" + squawk + "'").c_str(), true, true, false, false, false);
+			}
+			else
+			{
+#ifdef _DEBUG
+				DisplayMsg = string{ it->first } + ", code " + squawk + " assigned";
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+			}
+			it = PendingSquawks.erase(it);
+		}
+		else
+		{
+			it++;
 		}
 	}
 }

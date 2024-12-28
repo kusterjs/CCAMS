@@ -94,7 +94,7 @@ string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
 	auto res = client.Get(uri, headers);
 
 	if (!res || res->status != httplib::StatusCode::OK_200) {
-		return string{ httplib::to_string(res.error()) };
+		return string{ "E" + httplib::to_string(res.error())};
 	}
 
 	string answer = res->body;
