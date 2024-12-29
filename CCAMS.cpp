@@ -118,7 +118,7 @@ bool CCAMS::PluginCommands(cmatch Command)
 			SaveDataToSettings("AutoAssign", "Automatic assignment of squawk codes", to_string(autoAssignRefreshRate).c_str());
 			DisplayUserMessage(MY_PLUGIN_NAME, "Setting changed", string("Automatic code assignment enabled (refresh rate " + to_string(autoAssignRefreshRate) + " seconds)").c_str(), true, true, false, false, false);
 		}
-		else if (autoAssign > 0)
+		else if (autoAssign > 0 || autoAssignRefreshRate == 0)
 		{
 			autoAssign = 0;
 			SaveDataToSettings("AutoAssign", "Automatic assignment of squawk codes", "0");
