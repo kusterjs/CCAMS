@@ -27,6 +27,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 	RegisterTagItemType("EHS GS", ItemCodes::TAG_ITEM_EHS_GS);
 	RegisterTagItemType("Mode S squawk error", ItemCodes::TAG_ITEM_ERROR_MODES_USE);
 	RegisterTagItemType("Assigned squawk", ItemCodes::TAG_ITEM_SQUAWK);
+	RegisterTagItemType("Pinned to EHS list", ItemCodes::TAG_ITEM_EHS_PINNED);
 
 	RegisterTagItemFunction("Auto assign squawk", ItemCodes::TAG_FUNC_ASSIGN_SQUAWK_AUTO);
 	RegisterTagItemFunction("Open SQUAWK assign popup", ItemCodes::TAG_FUNC_SQUAWK_POPUP);
