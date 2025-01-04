@@ -1191,8 +1191,31 @@ std::vector<const char*> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 			continue;
 		}
 
+		// search for all actual codes used by pilots
+		auto pssr = RadarTarget.GetPosition().GetSquawk();
+		if (strlen(pssr) == 4 &&
+			atoi(pssr) % 100 != 0 &&
+			strcmp(pssr, squawkModeS) != 0 &&
+			strcmp(pssr, squawkVFR) != 0 &&
+			strcmp(pssr, RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk()) != 0)
+		{
+			usedCodes.push_back(pssr);
+		}
+	}
+
+	for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
+	{
+		if (FP.GetCallsign() == FlightPlan.GetCallsign())
+		{
+#ifdef _DEBUG
+			string DisplayMsg{ "The code of " + (string)FP.GetCallsign() + " is not considered" };
+			//DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+			continue;
+		}
+
 		// search for all controller assigned codes
-		auto assr = RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk();
+		auto assr = FP.GetControllerAssignedData().GetSquawk();
 		if (strlen(assr) == 4 &&
 			atoi(assr) % 100 != 0 &&
 			strcmp(assr, squawkModeS) != 0 &&
@@ -1201,21 +1224,12 @@ std::vector<const char*> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 			usedCodes.push_back(assr);
 		}
 
-		// search for all actual codes used by pilots
-		auto pssr = RadarTarget.GetPosition().GetSquawk();
-		if (strlen(pssr) == 4 &&
-			atoi(pssr) % 100 != 0 &&
-			strcmp(pssr, squawkModeS) != 0 &&
-			strcmp(pssr, squawkVFR) != 0 &&
-			strcmp(pssr, assr) != 0)
-		{
-			usedCodes.push_back(pssr);
-		}
-
-		sort(usedCodes.begin(), usedCodes.end());
-		auto u = unique(usedCodes.begin(), usedCodes.end());
-		usedCodes.erase(u, usedCodes.end());
 	}
+
+	sort(usedCodes.begin(), usedCodes.end());
+	auto u = unique(usedCodes.begin(), usedCodes.end());
+	usedCodes.erase(u, usedCodes.end());
+
 	return usedCodes;
 }
 
