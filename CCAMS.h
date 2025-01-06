@@ -101,7 +101,7 @@ public:
 	bool PluginCommands(cmatch Command);
 
 	bool IsADEPvicinity(const CFlightPlan& FlightPlan) const;
-	vector<const char*> collectUsedCodes(const CFlightPlan& FlightPlan);
+	vector<string> collectUsedCodes(const CFlightPlan& FlightPlan);
 
 private:
 	future<string> fUpdateString;

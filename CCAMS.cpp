@@ -1195,9 +1195,9 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 	return true;
 }
 
-std::vector<const char*> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
+std::vector<string> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 {
-	vector<const char*> usedCodes;
+	vector<string> usedCodes;
 	for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
 		RadarTarget = RadarTargetSelectNext(RadarTarget))
 	{
