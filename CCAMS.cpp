@@ -206,43 +206,62 @@ bool CCAMS::PluginCommands(cmatch Command)
 		for (CFlightPlan FlightPlan = FlightPlanSelectFirst(); FlightPlan.IsValid();
 			FlightPlan = FlightPlanSelectNext(FlightPlan))
 		{
-			if (sCommand == FlightPlan.GetCallsign())
+			if (_stricmp(sCommand.c_str(), FlightPlan.GetCallsign()) == 0)
 			{
-				string DisplayMsg = "Status " + string{FlightPlan.GetCallsign()} + ": " + (FlightPlan.GetSimulated() ? "simulated" : "not sim") + 
-				", FP Type '" + FlightPlan.GetFlightPlanData().GetPlanType() + "'" + 
-				", AC info '" + FlightPlan.GetFlightPlanData().GetAircraftInfo() + "' / '" + FlightPlan.GetFlightPlanData().GetCapibilities() + "'" +
-				", " + to_string(FlightPlan.GetSectorEntryMinutes()) + " Minutes to Sector Entry, " + 
-				(HasValidSquawk(FlightPlan) ? "has valid squawk" : "has NO valid squawk") +
-				", ASSIGNED '" + FlightPlan.GetControllerAssignedData().GetSquawk() + "', SET " + FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetSquawk();
-				DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+				if (Command[2].str() == "assign")
+				{
+					AssignAutoSquawk(FlightPlan);
+					return true;
+				}
 
 				if (!ControllerMyself().IsValid() || !ControllerMyself().IsController() || (ControllerMyself().GetFacility() > 1 && ControllerMyself().GetFacility() < 5))
 					DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "Debug", "This controller is not allowed to automatically assign squawks", true, false, false, false, false);
 
+				string DisplayMsg = (FlightPlan.GetSimulated() ? "simulated" : "not sim") + (string)", FP received: " + (FlightPlan.GetFlightPlanData().IsReceived() ? "YES" : "NO") + ", FP Type '" + FlightPlan.GetFlightPlanData().GetPlanType() + "'" +
+				", AC info '" + FlightPlan.GetFlightPlanData().GetAircraftInfo() + "' / '" + string{FlightPlan.GetFlightPlanData().GetCapibilities()} + "'" +
+				", " + to_string(FlightPlan.GetSectorEntryMinutes()) + " Minutes to Sector Entry, " + 
+				(HasValidSquawk(FlightPlan) ? "has valid squawk" : "has NO valid squawk") +
+				", ASSIGNED '" + FlightPlan.GetControllerAssignedData().GetSquawk() + "', SET " + FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetSquawk();
+				DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), FlightPlan.GetCallsign(), DisplayMsg.c_str(), true, false, false, false, false);
 
 				if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
-					DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "Debug", "This flight plan has already been processed", true, false, false, false, false);
+					DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), FlightPlan.GetCallsign(), "This flight plan has already been processed", true, false, false, false, false);
 
 				for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
 					RadarTarget = RadarTargetSelectNext(RadarTarget))
 				{
-					if (_stricmp(RadarTarget.GetCallsign(), FlightPlan.GetCallsign()) == 0)
+					if (_stricmp(RadarTarget.GetCallsign(), FlightPlan.GetCallsign()) == 0 || strlen(FlightPlan.GetControllerAssignedData().GetSquawk()) != 4)
 						continue;
 					else if (_stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0 && _stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(),squawkModeS) != 0)
 					{
-						DisplayMsg = "ASSR also used for " + string{ RadarTarget.GetCallsign() } + ", " + (RadarTarget.GetCorrelatedFlightPlan().GetSimulated() ? "simulated" : "not sim") +
+						DisplayMsg = "also used for " + string{ RadarTarget.GetCallsign() } + ", " + (RadarTarget.GetCorrelatedFlightPlan().GetSimulated() ? "simulated" : "not sim") +
 							", FP Type '" + RadarTarget.GetCorrelatedFlightPlan().GetFlightPlanData().GetPlanType() + "', " + to_string(RadarTarget.GetCorrelatedFlightPlan().GetSectorEntryMinutes()) +
 							" Minutes to Sector Entry, " + (HasValidSquawk(RadarTarget.GetCorrelatedFlightPlan()) ? "has valid squawk" : "has NO valid squawk") + 
 							", ASSIGNED '" + RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk() + "', SET " + RadarTarget.GetPosition().GetSquawk();
-						DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), RadarTarget.GetCallsign(), DisplayMsg.c_str(), true, false, false, false, false);
+						DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "ASSR (RT)", DisplayMsg.c_str(), true, false, false, false, false);
 					}
 					else if (_stricmp(RadarTarget.GetPosition().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0 && _stricmp(RadarTarget.GetPosition().GetSquawk(), squawkModeS) != 0)
 					{
-						DisplayMsg = "PSSR also used for " + string{ RadarTarget.GetCallsign() } + ", " + (RadarTarget.GetCorrelatedFlightPlan().GetSimulated() ? "simulated" : "not sim") +
+						DisplayMsg = "also used for " + string{ RadarTarget.GetCallsign() } + ", " + (RadarTarget.GetCorrelatedFlightPlan().GetSimulated() ? "simulated" : "not sim") +
 							", FP Type '" + RadarTarget.GetCorrelatedFlightPlan().GetFlightPlanData().GetPlanType() + "', " + to_string(RadarTarget.GetCorrelatedFlightPlan().GetSectorEntryMinutes()) +
 							" Minutes to Sector Entry, " + (HasValidSquawk(RadarTarget.GetCorrelatedFlightPlan()) ? "has valid squawk" : "has NO valid squawk") + 
 							", ASSIGNED '" + RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk() + "', SET " + RadarTarget.GetPosition().GetSquawk();
-						DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), RadarTarget.GetCallsign(), DisplayMsg.c_str(), true, false, false, false, false);
+						DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "PSSR (RT)", DisplayMsg.c_str(), true, false, false, false, false);
+					}
+				}
+
+				for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
+				{
+					if (strcmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0 || strlen(FP.GetControllerAssignedData().GetSquawk()) != 4)
+						continue;
+
+					if (strcmp(FlightPlan.GetControllerAssignedData().GetSquawk(), FP.GetControllerAssignedData().GetSquawk()) == 0)
+					{
+						DisplayMsg = "also used for " + string{ FP.GetCallsign() } + ", " + (FP.GetSimulated() ? "simulated" : "not sim") +
+							", FP Type '" + FP.GetFlightPlanData().GetPlanType() + "', " + to_string(FP.GetSectorEntryMinutes()) +
+							" Minutes to Sector Entry, " + (HasValidSquawk(FP) ? "has valid squawk" : "has NO valid squawk") +
+							", ASSIGNED '" + FP.GetControllerAssignedData().GetSquawk() + "', SET " + FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetSquawk();
+						DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "ASSR (FP)", DisplayMsg.c_str(), true, false, false, false, false);
 					}
 				}
 				return true;
