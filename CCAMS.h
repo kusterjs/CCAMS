@@ -140,6 +140,7 @@ private:
 
 	bool HasDuplicateSquawk(const CFlightPlan& FlightPlan);
 	bool HasDuplicateSquawk(const CRadarTarget& RadarTarget);
+	bool HasDuplicatePSSR(const CFlightPlan& FlightPlan);
 
 	map<const char*, future<string>> PendingSquawks;
 

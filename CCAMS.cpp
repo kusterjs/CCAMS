@@ -218,10 +218,9 @@ bool CCAMS::PluginCommands(cmatch Command)
 					DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "Debug", "This controller is not allowed to automatically assign squawks", true, false, false, false, false);
 
 				string DisplayMsg = (FlightPlan.GetSimulated() ? "simulated" : "not sim") + (string)", FP received: " + (FlightPlan.GetFlightPlanData().IsReceived() ? "YES" : "NO") + ", FP Type '" + FlightPlan.GetFlightPlanData().GetPlanType() + "'" +
-				", AC info '" + FlightPlan.GetFlightPlanData().GetAircraftInfo() + "' / '" + string{FlightPlan.GetFlightPlanData().GetCapibilities()} + "'" +
-				", " + to_string(FlightPlan.GetSectorEntryMinutes()) + " Minutes to Sector Entry, " + 
-				(HasValidSquawk(FlightPlan) ? "has valid squawk" : "has NO valid squawk") +
-				", ASSIGNED '" + FlightPlan.GetControllerAssignedData().GetSquawk() + "', SET " + FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetSquawk();
+					", AC info '" + FlightPlan.GetFlightPlanData().GetAircraftInfo() + "' / '" + (FlightPlan.GetFlightPlanData().GetCapibilities() == '\n' ? "(EOL)" : string{ FlightPlan.GetFlightPlanData().GetCapibilities() }) + "'" +
+					", " + to_string(FlightPlan.GetSectorEntryMinutes()) + " Minutes to Sector Entry, " + (HasValidSquawk(FlightPlan) ? "has valid squawk" : "has NO valid squawk") +
+					", ASSIGNED '" + FlightPlan.GetControllerAssignedData().GetSquawk() + "', SET " + FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetSquawk();
 				DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), FlightPlan.GetCallsign(), DisplayMsg.c_str(), true, false, false, false, false);
 
 				if (find(ProcessedFlightPlans.begin(), ProcessedFlightPlans.end(), FlightPlan.GetCallsign()) != ProcessedFlightPlans.end())
@@ -581,7 +580,11 @@ void CCAMS::OnTimer(int Counter)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", "Active connection established, automatic squawk assignment enabled", true, false, false, false, false);
 #endif
 
+#ifdef _DEBUG
+	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && (ConnectionState > 10 || GetConnectionType() == 4))
+#else
 	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && ConnectionState > 10)
+#endif // _DEBUG
 	{
 		AssignPendingSquawks();
 
@@ -674,6 +677,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 		// The flight was already processed, but the assigned code has become invalid again
 		// This is probably due to a duplicate, where the code assigned earlier was assigned to a second aircraft by another controller
 		if (FlightPlan.GetTrackingControllerIsMe())
+		//if (FlightPlan.GetTrackingControllerIsMe() && !HasDuplicatePSSR(FlightPlan))
 		{
 			// attempting to change to squawk of the other aircraft
 			for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
@@ -690,6 +694,9 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 						break;
 					else if (IsADEPvicinity(FP) || FP.GetDistanceToDestination() < APTcodeMaxDist)
 						break;
+					else if (FP.GetCorrelatedRadarTarget().IsValid())
+						if (_stricmp(FP.GetCorrelatedRadarTarget().GetPosition().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0)
+							break;
 
 					if (PendingSquawks.find(FP.GetCallsign()) == PendingSquawks.end())
 						PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FP)));
@@ -1133,6 +1140,35 @@ bool CCAMS::HasDuplicateSquawk(const CFlightPlan& FlightPlan)
 				// duplicate identified for the assigned code
 #ifdef _DEBUG
 				DisplayMsg = "DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already assigned to " + FP.GetCallsign();
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool CCAMS::HasDuplicatePSSR(const CFlightPlan& FlightPlan)
+{
+	const char* assr = FlightPlan.GetControllerAssignedData().GetSquawk();
+	string DisplayMsg;
+
+	if (strlen(assr) == 4)
+	{
+		// searching for duplicate assignments in radar targets
+		for (CRadarTarget RT = RadarTargetSelectFirst(); RT.IsValid();
+			RT = RadarTargetSelectNext(RT))
+		{
+			if (strcmp(RT.GetCallsign(), FlightPlan.GetCallsign()) == 0)
+				continue;
+
+			if (strcmp(assr, RT.GetPosition().GetSquawk()) == 0)
+			{
+				// duplicate identified for the assigned code
+#ifdef _DEBUG
+				DisplayMsg = "DUPE: ASSIGNED code " + string{ assr } + " of " + FlightPlan.GetCallsign() + " is already used (SET) by " + RT.GetCallsign();
 				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 				return true;
