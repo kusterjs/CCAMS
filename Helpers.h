@@ -21,6 +21,7 @@ using namespace EuroScopePlugIn;
 
 class CCAMS;
 string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan);
+string LoadWebSquawk2(const CFlightPlan& FlightPlan, const CController& ATCO, vector<string> usedCodes, bool vicinityADEP, const int ConnectionType);
 
 #endif // EXTERNAL_FUNCTION_H
 

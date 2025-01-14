@@ -104,6 +104,64 @@ string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
 		return string{ "E411" };
 	return answer;
 }
+
+string LoadWebSquawk2(const CFlightPlan& FlightPlan, const CController& ATCO, vector<string> usedCodes, bool vicinityADEP, const int ConnectionType)
+{
+	string codes;
+	for (size_t i = 0; i < usedCodes.size(); i++)
+	{
+		if (i > 0)
+			codes += "~";
+		codes += usedCodes[i];
+	}
+
+	string query_string = "callsign=" + string(ATCO.GetCallsign());
+	if (FlightPlan.IsValid())
+	{
+		if (vicinityADEP)
+		{
+			query_string += "&orig=" + string(FlightPlan.GetFlightPlanData().GetOrigin());
+		}
+		query_string += "&dest=" + string(FlightPlan.GetFlightPlanData().GetDestination()) +
+			"&flightrule=" + string(FlightPlan.GetFlightPlanData().GetPlanType());
+
+		if (FlightPlan.GetCorrelatedRadarTarget().IsValid())
+			if (FlightPlan.GetCorrelatedRadarTarget().GetPosition().IsValid())
+				query_string += "&latitude=" + to_string(FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Latitude) +
+				"&longitude=" + to_string(FlightPlan.GetCorrelatedRadarTarget().GetPosition().GetPosition().m_Longitude);
+
+		query_string += "&connectiontype=" + to_string(ConnectionType);
+
+#ifndef _DEBUG
+		if (ConnectionType > 2)
+		{
+			query_string += "&sim";
+		}
+#endif
+	}
+	if (!codes.empty())
+	{
+		query_string += "&codes=" + codes;
+	}
+	httplib::Headers headers = {
+		{"User-Agent", "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION}
+	};
+
+	httplib::Client client(MY_PLUGIN_APP_BASE);
+	string uri = MY_PLUGIN_APP_ENDPOINT + string("?") + query_string;
+	auto res = client.Get(uri, headers);
+
+	if (!res || res->status != httplib::StatusCode::OK_200) {
+		return string{ httplib::to_string(res.error()) };
+	}
+
+	string answer = res->body;
+	trim(answer);
+
+	if (answer.empty())
+		return string{ "E411" };
+	return answer;
+}
 #else
 string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
 {
