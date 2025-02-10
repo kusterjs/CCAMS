@@ -521,7 +521,7 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 		{
 			if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
 			{
-				PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FlightPlan)));
+				PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
 #ifdef _DEBUG
 				if (GetConnectionType() == 4)
 				{
@@ -561,7 +561,7 @@ void CCAMS::OnTimer(int Counter)
 	if (fUpdateString.valid() && fUpdateString.wait_for(0ms) == future_status::ready)
 		DoInitialLoad(fUpdateString);
 
-	if (GetConnectionType() > 0)
+	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && GetConnectionType() > 0)
 		if (GetConnectionType() != 4 || ConnectionState != 4) ConnectionState++;
 	else if (GetConnectionType() != ConnectionState)
 	{
@@ -581,9 +581,9 @@ void CCAMS::OnTimer(int Counter)
 #endif
 
 #ifdef _DEBUG
-	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && (ConnectionState > 10 || GetConnectionType() == 4))
+	if (ConnectionState > 10 || GetConnectionType() == 4)
 #else
-	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && ConnectionState > 10)
+	if (ConnectionState > 10)
 #endif // _DEBUG
 	{
 		AssignPendingSquawks();
@@ -699,7 +699,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 							break;
 
 					if (PendingSquawks.find(FP.GetCallsign()) == PendingSquawks.end())
-						PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FP)));
+						PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, FP, ControllerMyself(), collectUsedCodes(FP), IsADEPvicinity(FP), GetConnectionType())));
 #ifdef _DEBUG
 					log << FP.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
 					writeLogFile(log);
@@ -798,7 +798,7 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 	}
 	else if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
 	{
-		PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FlightPlan)));
+		PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
 #ifdef _DEBUG
 		log << FlightPlan.GetCallsign() << ":FP processed:unique code AUTO assigned";
 		writeLogFile(log);
@@ -812,15 +812,14 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 
 void CCAMS::AssignSquawk(CFlightPlan& FlightPlan)
 {
-	//future<string> webSquawk = std::async(LoadWebSquawk2, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
-	future<string> webSquawk = std::async(LoadWebSquawk, ref(*this), FlightPlan));
+	future<string> webSquawk = std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
 
 	if (webSquawk.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 	{
 		string squawk = webSquawk.get();
 		if (!FlightPlanSelect(FlightPlan.GetCallsign()).GetControllerAssignedData().SetSquawk(squawk.c_str()))
 		{
-			PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, ref(*this), FlightPlan)));
+			PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
 		}
 	}
 }
@@ -1235,9 +1234,11 @@ bool CCAMS::HasValidSquawk(const EuroScopePlugIn::CFlightPlan& FlightPlan)
 std::vector<string> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 {
 	vector<string> usedCodes;
+	int i = 0;
 	for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
 		RadarTarget = RadarTargetSelectNext(RadarTarget))
 	{
+		i++;
 		if (RadarTarget.GetCallsign() == FlightPlan.GetCallsign())
 		{
 #ifdef _DEBUG
@@ -1259,8 +1260,10 @@ std::vector<string> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 		}
 	}
 
+	int j = 0;
 	for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
 	{
+		j++;
 		if (FP.GetCallsign() == FlightPlan.GetCallsign())
 		{
 #ifdef _DEBUG
@@ -1281,6 +1284,10 @@ std::vector<string> CCAMS::collectUsedCodes(const CFlightPlan& FlightPlan)
 		}
 
 	}
+#ifdef _DEBUG
+	DisplayUserMessage(MY_PLUGIN_NAME, "Debug", string{"Used Codes: " + to_string(i) + " RadarTargets, " + to_string(j) + " FlightPlans"}.c_str(), true, false, false, false, false);
+#endif // _DEBUG
+
 
 	sort(usedCodes.begin(), usedCodes.end());
 	auto u = unique(usedCodes.begin(), usedCodes.end());

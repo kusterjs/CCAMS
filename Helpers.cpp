@@ -47,7 +47,8 @@ string LoadUpdateString()
 
 #ifdef USE_HTTPLIB
 /* NEW HTTPLIB Client implementation */
-string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
+#ifdef _DEBUG
+string LoadWebSquawkO(CCAMS& ccams, CFlightPlan& FlightPlan)
 {
 	string codes;
 	for (size_t i = 0; i < ccams.collectUsedCodes(FlightPlan).size(); i++)
@@ -104,8 +105,9 @@ string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
 		return string{ "E411" };
 	return answer;
 }
+#endif
 
-string LoadWebSquawk2(const CFlightPlan& FlightPlan, const CController& ATCO, vector<string> usedCodes, bool vicinityADEP, const int ConnectionType)
+string LoadWebSquawk(const CFlightPlan& FlightPlan, const CController& ATCO, vector<string> usedCodes, bool vicinityADEP, const int ConnectionType)
 {
 	string codes;
 	for (size_t i = 0; i < usedCodes.size(); i++)
