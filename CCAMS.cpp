@@ -561,8 +561,8 @@ void CCAMS::OnTimer(int Counter)
 	if (fUpdateString.valid() && fUpdateString.wait_for(0ms) == future_status::ready)
 		DoInitialLoad(fUpdateString);
 
-	if (GetConnectionType() > 0 && GetConnectionType() != 4)
-		ConnectionState++;
+	if (GetConnectionType() > 0)
+		if (GetConnectionType() != 4 || ConnectionState != 4) ConnectionState++;
 	else if (GetConnectionType() != ConnectionState)
 	{
 		ConnectionState = 0;
@@ -812,7 +812,8 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 
 void CCAMS::AssignSquawk(CFlightPlan& FlightPlan)
 {
-	future<string> webSquawk = std::async(LoadWebSquawk2, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
+	//future<string> webSquawk = std::async(LoadWebSquawk2, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
+	future<string> webSquawk = std::async(LoadWebSquawk, ref(*this), FlightPlan));
 
 	if (webSquawk.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 	{
