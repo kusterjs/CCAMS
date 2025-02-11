@@ -229,9 +229,9 @@ bool CCAMS::PluginCommands(cmatch Command)
 				for (CRadarTarget RadarTarget = RadarTargetSelectFirst(); RadarTarget.IsValid();
 					RadarTarget = RadarTargetSelectNext(RadarTarget))
 				{
-					if (_stricmp(RadarTarget.GetCallsign(), FlightPlan.GetCallsign()) == 0 || strlen(FlightPlan.GetControllerAssignedData().GetSquawk()) != 4)
+					if (_stricmp(RadarTarget.GetCallsign(), FlightPlan.GetCallsign()) == 0 || strlen(FlightPlan.GetControllerAssignedData().GetSquawk()) != 4 || _stricmp(FlightPlan.GetControllerAssignedData().GetSquawk(), squawkModeS) == 0 || _stricmp(FlightPlan.GetControllerAssignedData().GetSquawk(), squawkVFR) == 0)
 						continue;
-					else if (_stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0 && _stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(),squawkModeS) != 0)
+					else if (_stricmp(RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0)
 					{
 						DisplayMsg = "also used for " + string{ RadarTarget.GetCallsign() } + ", " + (RadarTarget.GetCorrelatedFlightPlan().GetSimulated() ? "simulated" : "not sim") +
 							", FP Type '" + RadarTarget.GetCorrelatedFlightPlan().GetFlightPlanData().GetPlanType() + "', " + to_string(RadarTarget.GetCorrelatedFlightPlan().GetSectorEntryMinutes()) +
@@ -239,7 +239,7 @@ bool CCAMS::PluginCommands(cmatch Command)
 							", ASSIGNED '" + RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk() + "', SET " + RadarTarget.GetPosition().GetSquawk();
 						DisplayUserMessage((MY_PLUGIN_NAME + (string)" FP Status").c_str(), "ASSR (RT)", DisplayMsg.c_str(), true, false, false, false, false);
 					}
-					else if (_stricmp(RadarTarget.GetPosition().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0 && _stricmp(RadarTarget.GetPosition().GetSquawk(), squawkModeS) != 0)
+					else if (_stricmp(RadarTarget.GetPosition().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0)
 					{
 						DisplayMsg = "also used for " + string{ RadarTarget.GetCallsign() } + ", " + (RadarTarget.GetCorrelatedFlightPlan().GetSimulated() ? "simulated" : "not sim") +
 							", FP Type '" + RadarTarget.GetCorrelatedFlightPlan().GetFlightPlanData().GetPlanType() + "', " + to_string(RadarTarget.GetCorrelatedFlightPlan().GetSectorEntryMinutes()) +
@@ -251,7 +251,7 @@ bool CCAMS::PluginCommands(cmatch Command)
 
 				for (CFlightPlan FP = FlightPlanSelectFirst(); FP.IsValid(); FP = FlightPlanSelectNext(FP))
 				{
-					if (strcmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0 || strlen(FP.GetControllerAssignedData().GetSquawk()) != 4)
+					if (strcmp(FP.GetCallsign(), FlightPlan.GetCallsign()) == 0 || strlen(FlightPlan.GetControllerAssignedData().GetSquawk()) != 4 || _stricmp(FlightPlan.GetControllerAssignedData().GetSquawk(), squawkModeS) == 0 || _stricmp(FlightPlan.GetControllerAssignedData().GetSquawk(), squawkVFR) == 0)
 						continue;
 
 					if (strcmp(FlightPlan.GetControllerAssignedData().GetSquawk(), FP.GetControllerAssignedData().GetSquawk()) == 0)
