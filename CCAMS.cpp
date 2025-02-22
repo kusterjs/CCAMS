@@ -558,7 +558,7 @@ void CCAMS::OnTimer(int Counter)
 #ifdef _DEBUG
 	stringstream log;
 #endif
-	if (fUpdateString.valid() && fUpdateString.wait_for(0ms) == future_status::ready)
+	if (fUpdateString.valid() && fUpdateString.wait_for(chrono::milliseconds(0)) == future_status::ready)
 		DoInitialLoad(fUpdateString);
 
 	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && GetConnectionType() > 0)
