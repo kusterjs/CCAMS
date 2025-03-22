@@ -58,6 +58,9 @@
     <Text Include="config2.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="version.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md">

@@ -191,6 +191,7 @@
     <Text Include="CCAMS\ver.txt" />
     <Text Include="config.txt" />
     <Text Include="config2.txt" />
+    <Text Include="version.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
