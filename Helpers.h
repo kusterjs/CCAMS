@@ -2,64 +2,72 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <WinInet.h>
-#include <algorithm>
-#include <cctype>
-#include <locale>
-#include <EuroScopePlugIn.h>
 #include "CCAMS.h"
 
 #ifdef USE_HTTPLIB
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>
 #include <Windows.h>
+#else
+#include <WinInet.h>
 #endif
 
 using namespace std;
+using namespace EuroScopePlugIn;
+
+#ifdef _DEBUG
+#ifndef EXTERNAL_FUNCTION_H
+#define EXTERNAL_FUNCTION_H
+
+class CCAMS;
+string LoadWebSquawkO(CCAMS& ccams, CFlightPlan& FlightPlan);
+
+#endif // EXTERNAL_FUNCTION_H
+#endif // _DEBUG
 
 
+string LoadWebSquawk(const CFlightPlan& FlightPlan, const CController& ATCO, vector<string> usedCodes, bool vicinityADEP, const int ConnectionType);
 string LoadUpdateString();
 
-string LoadWebSquawk(EuroScopePlugIn::CFlightPlan FP, EuroScopePlugIn::CController ATCO, vector<const char*> usedCodes, bool vicinityADEP, int ConnectionType);
+vector<int> GetExeVersion();
+string EuroScopeVersion();
 
-string ESversion();
-
-inline std::vector<std::string> split(const std::string & s, char delim)
+inline vector<string> split(const string & s, char delim)
 {
-	std::istringstream ss(s);
-	std::string item;
-	std::vector<std::string> elems;
+	istringstream ss(s);
+	string item;
+	vector<string> elems;
 
-	while (std::getline(ss, item, delim))
+	while (getline(ss, item, delim))
 		elems.push_back(item);
 	return elems;
 }
 
 // trim from start (in place)
-static inline void ltrim(std::string& s) {
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-		return !std::isspace(ch);
+static inline void ltrim(string& s) {
+	s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char ch) {
+		return !isspace(ch);
 		}));
 }
 
 // trim from end (in place)
-static inline void rtrim(std::string& s) {
-	s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-		return !std::isspace(ch);
+static inline void rtrim(string& s) {
+	s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+		return !isspace(ch);
 		}).base(), s.end());
 }
 
 // trim from both ends (in place)
-static inline void trim(std::string& s) {
+static inline void trim(string& s) {
 	ltrim(s);
 	rtrim(s);
 }
 
 class modesexception
-	: public std::exception
+	: public exception
 {
 public:
-	explicit modesexception(std::string & what) : std::exception { what.c_str() } {}
+	explicit modesexception(string & what) : exception { what.c_str() } {}
 	virtual inline const long icon() const = 0;
 	inline void whatMessageBox()
 	{
@@ -71,7 +79,7 @@ class error
 	: public modesexception
 {
 public:
-	explicit error(std::string && what) : modesexception { what } {}
+	explicit error(string && what) : modesexception { what } {}
 	inline const long icon() const
 	{
 		return MB_ICONERROR;
@@ -82,7 +90,7 @@ class warning
 	: public modesexception
 {
 public:
-	explicit warning(std::string && what) : modesexception { what } {}
+	explicit warning(string && what) : modesexception { what } {}
 	inline const long icon() const
 	{
 		return MB_ICONWARNING;

@@ -3,10 +3,7 @@
 #include <string>
 #include <regex>
 #include <future>
-#include <thread>
 #include <map>
-#include <cstdio>
-#include <EuroScopePlugIn.h>
 #include "Helpers.h"
 
 using namespace std;
@@ -14,11 +11,11 @@ using namespace EuroScopePlugIn;
 
 #define MY_PLUGIN_NAME			"CCAMS"
 #ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.4.0 DEV"
+#define MY_PLUGIN_VERSION		"2.4.7.28"
 #else
-#define MY_PLUGIN_VERSION		"2.4.0"
+#define MY_PLUGIN_VERSION		"2.5.0"
 #endif
-#define MY_PLUGIN_VERSIONCODE		14
+#define MY_PLUGIN_VERSIONCODE		15
 #ifdef USE_HTTPLIB
 #define MY_PLUGIN_UPDATE_BASE		"https://raw.githubusercontent.com"
 #define MY_PLUGIN_UPDATE_ENDPOINT	"/kusterjs/CCAMS/master/config2.txt"
@@ -40,7 +37,8 @@ struct ItemCodes
 		TAG_ITEM_EHS_ROLL,
 		TAG_ITEM_EHS_GS,
 		TAG_ITEM_ERROR_MODES_USE,
-		TAG_ITEM_SQUAWK
+		TAG_ITEM_SQUAWK,
+		TAG_ITEM_EHS_PINNED
 	};
 
 	enum ItemFunctions : int
@@ -51,7 +49,8 @@ struct ItemCodes
 		TAG_FUNC_ASSIGN_SQUAWK_MANUAL,
 		TAG_FUNC_ASSIGN_SQUAWK_VFR,
 		TAG_FUNC_ASSIGN_SQUAWK_MODES,
-		TAG_FUNC_ASSIGN_SQUAWK_DISCRETE
+		TAG_FUNC_ASSIGN_SQUAWK_DISCRETE,
+		TAG_FUNC_TOGGLE_EHS_LIST
 	};
 };
 
@@ -78,7 +77,7 @@ public:
 	explicit CCAMS(const EquipmentCodes&& ec = EquipmentCodes(), const SquawkCodes&& sc = SquawkCodes());
 	virtual ~CCAMS();
 
-	bool OnCompileCommand(const char* command);
+	bool OnCompileCommand(const char* sCommandLine);
 	void OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget,
 					  int ItemCode,
 					  int TagData,
@@ -99,24 +98,28 @@ public:
 
 	void OnTimer(int Counter);
 
-	bool PluginCommands(const char* Command);
+	bool PluginCommands(cmatch Command);
+
+	bool IsADEPvicinity(const CFlightPlan& FlightPlan) const;
+	vector<string> collectUsedCodes(const CFlightPlan& FlightPlan);
 
 private:
 	future<string> fUpdateString;
 	vector<string> ProcessedFlightPlans;
 	regex ModeSAirports;
 	CFlightPlanList FpListEHS;
+	vector<string> EHSListFlightPlans;
 	string EquipmentCodesFAA;
 	string EquipmentCodesICAO;
 	string EquipmentCodesICAOEHS;
 	const char* squawkModeS;
 	const char* squawkVFR;
-	int ConnectionStatus;
+	int ConnectionState;
 	bool pluginVersionCheck;
 	bool acceptEquipmentICAO;
 	bool acceptEquipmentFAA;
 	bool updateOnStartTracking;
-	bool autoAssign;
+	int autoAssign;
 	int APTcodeMaxGS;
 	int APTcodeMaxDist;
 
@@ -125,18 +128,21 @@ private:
 	void AssignPendingSquawks();
 	void DoInitialLoad(future<string> & message);
 	void ReadSettings();
+
 	bool IsFlightPlanProcessed(CFlightPlan& FlightPlan);
 	bool IsAcModeS(const CFlightPlan& FlightPlan) const;
 	bool IsApModeS(const string& icao) const;
 	bool IsEHS(const CFlightPlan& FlightPlan) const;
 	bool HasEquipment(const CFlightPlan& FlightPlan, bool acceptEquipmentFAA, bool acceptEquipmentICAO, string CodesICAO) const;
-	double GetDistanceFromOrigin(const CFlightPlan & FlightPlan) const;
-	bool IsADEPvicinity(const CFlightPlan& FlightPlan) const;
+	double GetDistanceFromOrigin(const CFlightPlan& FlightPlan) const;
 	bool IsEligibleSquawkModeS(const CFlightPlan& FlightPlan) const;
 	bool HasValidSquawk(const CFlightPlan& FlightPlan);
 
+	bool HasDuplicateSquawk(const CFlightPlan& FlightPlan);
+	bool HasDuplicateSquawk(const CRadarTarget& RadarTarget);
+	bool HasDuplicatePSSR(const CFlightPlan& FlightPlan);
+
 	map<const char*, future<string>> PendingSquawks;
-	vector<const char*> collectUsedCodes(const CFlightPlan& FlightPlan);
 
 #ifdef _DEBUG
 	void writeLogFile(stringstream& sText);
