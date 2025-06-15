@@ -372,9 +372,9 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 				// mode S code assigned, but not eligible
 				*pColorCode = EuroScopePlugIn::TAG_COLOR_REDUNDANT;
 			}
-			else if(strcmp(assr, pssr) != 0)
+			else if(strcmp(assr, pssr) != 0 || HasDuplicateSquawk(FlightPlan))
 			{
-				// assigned squawk is not set
+				// assigned squawk is not set or duplicate has been detected
 				*pColorCode = EuroScopePlugIn::TAG_COLOR_INFORMATION;
 			}
 			strcpy_s(sItemString, 16, assr);
