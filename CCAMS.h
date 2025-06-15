@@ -9,16 +9,12 @@
 using namespace std;
 using namespace EuroScopePlugIn;
 
-#define MY_PLUGIN_NAME			"CCAMS"
-#ifdef _DEBUG
-#define MY_PLUGIN_VERSION		"2.4.7.28"
-#else
-#define MY_PLUGIN_VERSION		"2.5.0"
-#endif
-#define MY_PLUGIN_VERSIONCODE		15
+#define MY_PLUGIN_NAME				PROJECT_NAME
 #ifdef USE_HTTPLIB
 #define MY_PLUGIN_UPDATE_BASE		"https://raw.githubusercontent.com"
-#define MY_PLUGIN_UPDATE_ENDPOINT	"/kusterjs/CCAMS/master/config2.txt"
+#define MY_PLUGIN_UPDATE_ENDPOINT	"/kusterjs/CCAMS/master/version.txt"
+#define MY_PLUGIN_CONFIG_BASE		"https://raw.githubusercontent.com"
+#define MY_PLUGIN_CONFIG_ENDPOINT	"/kusterjs/CCAMS/master/config.txt"
 #define MY_PLUGIN_APP_BASE			"https://ccams.kilojuliett.ch"
 #define MY_PLUGIN_APP_ENDPOINT		"/squawk"
 #else
@@ -67,14 +63,20 @@ struct SquawkCodes
 	const char* VFR{ "7000" };
 };
 
-static const regex MODE_S_AIRPORTS("^((E([BDHLT]|P(?!CE|DA|DE|IR|KS|LK|LY|MB|MI|MM|OK|PR|PW|SN|TM)|URM)|L[DFHIKORZ])[A-Z]{2}|LS(A|G[CG]|Z[BGHR]))", regex::icase);
+struct ModeS
+{
+	const regex AIRPORTS_MATCH{ "^((E([BDHLT]|P(?!CE|DA|DE|IR|KS|LK|LY|MB|MI|MM|OK|PR|PW|SN|TM)|URM)|L([DHIKORZ]|F(?!VP)))[A-Z]{2}|LS(A|G[CG]|Z[BGHR]))", regex::icase };
+	const regex AIRPORTS_NOTMATCH{ "^EP(CE|DA|DE|IR|KS|LK|LY|MB|MI|MM|OK|PR|PW|SN|TM)|LFVP", regex::icase };
+	const regex ROUTE_MATCH{ "", regex::icase };
+	const regex ROUTE_NOTMATCH{ "KOSEB|SONAL|SALLO|BAKLI|OKAGA|BIKRU|DETNI|BILRA", regex::icase };
+};
 
 
 class CCAMS :
 	public EuroScopePlugIn::CPlugIn
 {
 public:
-	explicit CCAMS(const EquipmentCodes&& ec = EquipmentCodes(), const SquawkCodes&& sc = SquawkCodes());
+	explicit CCAMS(const EquipmentCodes&& ec = EquipmentCodes(), const SquawkCodes&& sc = SquawkCodes(), const ModeS&& ms = ModeS());
 	virtual ~CCAMS();
 
 	bool OnCompileCommand(const char* sCommandLine);
@@ -105,8 +107,13 @@ public:
 
 private:
 	future<string> fUpdateString;
+	future<string> fVersion;
+	future<string> fConfig;
 	vector<string> ProcessedFlightPlans;
 	regex ModeSAirports;
+	regex ModeSAirportsExcl;
+	regex ModeSRoute;
+	regex ModeSRouteExcl;
 	CFlightPlanList FpListEHS;
 	vector<string> EHSListFlightPlans;
 	string EquipmentCodesFAA;
@@ -126,12 +133,14 @@ private:
 	void AssignAutoSquawk(CFlightPlan& FlightPlan);
 	void AssignSquawk(CFlightPlan& FlightPlan);
 	void AssignPendingSquawks();
-	void DoInitialLoad(future<string> & message);
+	void CheckVersion(future<string> & message);
+	void LoadConfig(future<string>& message);
 	void ReadSettings();
 
 	bool IsFlightPlanProcessed(CFlightPlan& FlightPlan);
 	bool IsAcModeS(const CFlightPlan& FlightPlan) const;
 	bool IsApModeS(const string& icao) const;
+	bool IsRteModeS(const CFlightPlan& FlightPlan) const;
 	bool IsEHS(const CFlightPlan& FlightPlan) const;
 	bool HasEquipment(const CFlightPlan& FlightPlan, bool acceptEquipmentFAA, bool acceptEquipmentICAO, string CodesICAO) const;
 	double GetDistanceFromOrigin(const CFlightPlan& FlightPlan) const;

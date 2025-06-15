@@ -1,20 +1,24 @@
 #include "stdafx.h"
 #include "CCAMS.h"
+#include "version.h"
 #include <fstream>
 
-CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE,
+CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc, const ModeS&& ms) : CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE,
 	MY_PLUGIN_NAME,
-	MY_PLUGIN_VERSION,
+	VER_FILEVERSION_STR,
 	MY_PLUGIN_DEVELOPER,
 	MY_PLUGIN_COPYRIGHT),
 	EquipmentCodesFAA(ec.FAA),
 	EquipmentCodesICAO(ec.ICAO_MODE_S),
 	EquipmentCodesICAOEHS(ec.ICAO_EHS),
-	ModeSAirports(MODE_S_AIRPORTS),
+	ModeSAirports(ms.AIRPORTS_MATCH),
+	ModeSAirportsExcl(ms.AIRPORTS_NOTMATCH),
+	ModeSRoute(ms.ROUTE_MATCH),
+	ModeSRouteExcl(ms.ROUTE_NOTMATCH),
 	squawkModeS(sc.MODE_S),
 	squawkVFR(sc.VFR)
 {
-	string DisplayMsg { "Version " + string { MY_PLUGIN_VERSION } + " loaded" };
+	string DisplayMsg { "Version " + string { VER_FILEVERSION_STR } + " loaded" };
 #ifdef _DEBUG
 	DisplayUserMessage(MY_PLUGIN_NAME, "Initialisation", ("DEBUG " + DisplayMsg).c_str(), true, false, false, false, false);
 #else
@@ -44,7 +48,8 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc) : CPlugIn(EuroSc
 	}
 
 	// Start new thread to get the version file from the server
-	fUpdateString = async(LoadUpdateString);
+	fVersion = async_http_get(MY_PLUGIN_UPDATE_BASE, MY_PLUGIN_UPDATE_ENDPOINT);
+	fConfig = async_http_get(MY_PLUGIN_CONFIG_BASE, MY_PLUGIN_CONFIG_ENDPOINT);
 
 	// Set default setting values
 	ConnectionState = 0;
@@ -151,7 +156,8 @@ bool CCAMS::PluginCommands(cmatch Command)
 	}
 	else if (sCommand == "reload")
 	{
-		fUpdateString = async(LoadUpdateString);
+		fVersion = async_http_get(MY_PLUGIN_UPDATE_BASE, MY_PLUGIN_UPDATE_ENDPOINT);
+		fConfig = async_http_get(MY_PLUGIN_CONFIG_BASE, MY_PLUGIN_CONFIG_ENDPOINT);
 		ReadSettings();
 		return true;
 	}
@@ -558,8 +564,11 @@ void CCAMS::OnTimer(int Counter)
 #ifdef _DEBUG
 	stringstream log;
 #endif
-	if (fUpdateString.valid() && fUpdateString.wait_for(chrono::milliseconds(0)) == future_status::ready)
-		DoInitialLoad(fUpdateString);
+	if (fVersion.valid() && fVersion.wait_for(chrono::milliseconds(0)) == std::future_status::ready)
+		CheckVersion(fVersion);
+
+	if (fConfig.valid() && fConfig.wait_for(chrono::milliseconds(0)) == std::future_status::ready)
+		LoadConfig(fConfig);
 
 	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && GetConnectionType() > 0)
 		if (GetConnectionType() != 4 || ConnectionState != 4) ConnectionState++;
@@ -855,6 +864,7 @@ void CCAMS::AssignPendingSquawks()
 #endif
 			}
 			it = PendingSquawks.erase(it);
+			break;	// exit function after one successful assignment to avoid an overload of requests being sent out simultaneously
 		}
 		else
 		{
@@ -863,26 +873,43 @@ void CCAMS::AssignPendingSquawks()
 	}
 }
 
-void CCAMS::DoInitialLoad(future<string> & fmessage)
+void CCAMS::CheckVersion(future<string> & fmessage)
 {
 	try
 	{
-		string message = fmessage.get();
-		smatch match;
-#ifdef _DEBUG
-		string DisplayMsg = "Update string downloaded: " + message;
-		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
-#endif
-		if (regex_match(message, match, regex("(\\d+)[:](\\d+)[:]([A-Z,]+)[:]([^:]+)$", regex::icase)))
+		std::string content = fmessage.get();
+		if (content.empty()) {
+			throw error{ string { MY_PLUGIN_NAME } + " plugin couldn't access the online version information. Automatic code assignment therefore not available." };
+		}
+		else
 		{
+			std::istringstream stream(content);
+			std::string line;
+			std::vector<std::string> lines;
+			int line_number = 1;
+			while (std::getline(stream, line)) {
+#ifdef _DEBUG
+				string DisplayMsg = "Version information downloaded, Line " + to_string(line_number) + ": " + line;
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+				lines.push_back(line);
+				line_number++;
+			}
+
 			std::vector<int> EuroScopeVersion = GetExeVersion();
+			string versionPluginLatest = lines[0];
+			string versionPluginMinimum = lines[1];
+
 
 			if (EuroScopeVersion[0] == 3)
 			{
 				if (EuroScopeVersion[1] < 2 || EuroScopeVersion[2] < 2)
-					DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope is not supported due to authentification requirements. Please visit https://forum.vatsim.net/t/euroscope-mandatory-update-authentication-changes/5643 for more information.", true, true, false, true, false);
-				else if (stoi(match[2].str(), nullptr, 0) > MY_PLUGIN_VERSIONCODE)
-					throw error{ "Your " + string { MY_PLUGIN_NAME } + " plugin (version " + MY_PLUGIN_VERSION + ") is outdated and the automatic code assignment therefore not available. Please change to the latest version.\n\nVisit https://github.com/kusterjs/CCAMS/releases" };
+					DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope is not supported due to authentification requirements. Please visit forum.vatsim.net/t/euroscope-mandatory-update-authentication-changes/5643 for more information.", true, true, false, true, false);
+				else if (compareVersions({ VER_FILEVERSION }, parseVersion(versionPluginMinimum)) < 0)
+				{
+					DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your plugin version is outdated and the automatic code assignment therefore not available. Please change to the latest version. Visit github.com/kusterjs/CCAMS/releases", true, true, false, true, false);
+					throw error{ "Your " + string { MY_PLUGIN_NAME } + " plugin (version " + VER_FILEVERSION_STR + ") is outdated and the automatic code assignment therefore not available. Please change to the latest version.\n\nVisit github.com/kusterjs/CCAMS/releases" };
+				}
 				else
 				{
 					if (EuroScopeVersion[2] > 3)
@@ -892,17 +919,11 @@ void CCAMS::DoInitialLoad(future<string> & fmessage)
 				}
 			}
 
-			if (stoi(match[1].str(), nullptr, 0) > MY_PLUGIN_VERSIONCODE)
+			if (compareVersions({ VER_FILEVERSION }, parseVersion(versionPluginLatest)) < 0)
 			{
-				DisplayUserMessage(MY_PLUGIN_NAME, "Update", "An update for the CCAMS plugin is available. Please visit https://github.com/kusterjs/CCAMS/releases and download the latest version.", true, true, false, true, false);
+				DisplayUserMessage(MY_PLUGIN_NAME, "Update", ("CCAMS plugin version " + (string)versionPluginLatest + " is now available. Please visit github.com/kusterjs/CCAMS/releases and download the latest version.").c_str(), true, true, false, true, false);
 			}
-			
-			//EquipmentCodesFAA = match[3].str();
-			ModeSAirports = regex(match[4].str(), regex::icase);
-		}
-		else
-		{
-			throw error{ string { MY_PLUGIN_NAME }  + " plugin couldn't parse the server configuration and version data. Automatic code assignment therefore not available." };
+
 		}
 	}
 	catch (modesexception & e)
@@ -910,6 +931,63 @@ void CCAMS::DoInitialLoad(future<string> & fmessage)
 		e.whatMessageBox();
 	}
 	catch (exception & e)
+	{
+		MessageBox(NULL, e.what(), MY_PLUGIN_NAME, MB_OK | MB_ICONERROR);
+	}
+	fmessage = future<string>();
+}
+
+void CCAMS::LoadConfig(future<string>& fmessage)
+{
+	try
+	{
+		std::string content = fmessage.get();
+		if (content.empty()) {
+			throw error{ string { MY_PLUGIN_NAME } + " plugin couldn't access the online configuration information. Fallback to hardcoded values." };
+		}
+		else
+		{
+			std::istringstream stream(content);
+			std::string line;
+			std::vector<std::string> lines;
+			int line_number = 1;
+			while (std::getline(stream, line)) {
+#ifdef _DEBUG
+				string DisplayMsg = "Version information downloaded, Line " + to_string(line_number) + ": " + line;
+				DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+				lines.push_back(line);
+				switch (line_number) {
+					case 1:
+						// Match airport
+						ModeSAirports = regex("^" + line, regex::icase);
+						break;
+					case 2:
+						// NOT match airport
+						ModeSAirportsExcl = regex("^" + line, regex::icase);
+						break;
+					case 3:
+						// Match route
+						ModeSRoute = regex(line, regex::icase);
+						break;
+					case 4:
+						// NOT match route
+						ModeSRouteExcl = regex(line, regex::icase);
+						break;
+					default:
+
+						break;
+				}
+
+				line_number++;
+			}
+		}
+	}
+	catch (modesexception& e)
+	{
+		e.whatMessageBox();
+	}
+	catch (exception& e)
 	{
 		MessageBox(NULL, e.what(), MY_PLUGIN_NAME, MB_OK | MB_ICONERROR);
 	}
@@ -1026,8 +1104,29 @@ bool CCAMS::IsADEPvicinity(const CFlightPlan& FlightPlan) const
 
 bool CCAMS::IsApModeS(const string& icao) const
 {
-	if (regex_search(icao, ModeSAirports))
+	if (regex_search(icao, ModeSAirports) && !regex_search(icao, ModeSAirportsExcl))
 		return true;
+
+	return false;
+}
+
+bool CCAMS::IsRteModeS(const CFlightPlan& FlightPlan) const
+{
+	CFlightPlanExtractedRoute FlightPlanExtractedRoute = FlightPlan.GetExtractedRoute();
+	for (size_t i = 0; i < FlightPlanExtractedRoute.GetPointsNumber(); i++)
+	{
+		if (regex_search(FlightPlanExtractedRoute.GetPointName(i), ModeSRouteExcl))
+			return false;
+	}
+
+	if (regex_search(FlightPlan.GetFlightPlanData().GetRoute(), ModeSRoute) && !regex_search(FlightPlan.GetFlightPlanData().GetRoute(), ModeSRouteExcl))
+		return true;
+
+	for (size_t i = 0; i < FlightPlanExtractedRoute.GetPointsNumber(); i++)
+	{
+		if (regex_search(FlightPlanExtractedRoute.GetPointName(i), ModeSRoute))
+			return true;
+	}
 
 	return false;
 }
@@ -1059,8 +1158,9 @@ bool CCAMS::HasEquipment(const CFlightPlan& FlightPlan, bool acceptEquipmentFAA,
 
 bool CCAMS::IsEligibleSquawkModeS(const EuroScopePlugIn::CFlightPlan& FlightPlan) const
 {
-	return IsAcModeS(FlightPlan) && IsApModeS(FlightPlan.GetFlightPlanData().GetDestination()) &&
-		(IsApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || (!IsADEPvicinity(FlightPlan) && (strlen(FlightPlan.GetTrackingControllerCallsign()) > 0) ? IsApModeS(FlightPlan.GetTrackingControllerCallsign()) : IsApModeS(ControllerMyself().GetCallsign())));
+	return IsAcModeS(FlightPlan) && IsApModeS(FlightPlan.GetFlightPlanData().GetDestination()) && IsRteModeS(FlightPlan) &&
+		(IsApModeS(FlightPlan.GetFlightPlanData().GetOrigin()) || 
+			(!IsADEPvicinity(FlightPlan) && (strlen(FlightPlan.GetTrackingControllerCallsign()) > 0) ? IsApModeS(FlightPlan.GetTrackingControllerCallsign()) : IsApModeS(ControllerMyself().GetCallsign())));
 }
 
 bool CCAMS::HasDuplicateSquawk(const CRadarTarget& RadarTarget)
