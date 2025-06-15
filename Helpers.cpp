@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Helpers.h"
+#include "version.h"
 
 #ifdef USE_HTTPLIB
 /* NEW HTTPLIB Client implementation */
@@ -18,10 +19,33 @@ string LoadUpdateString()
 
 	return res->body;
 }
+
+// Function that performs async HTTP GET and returns a future
+std::future<std::string> async_http_get(const std::string& host, const std::string& path) {
+	std::promise<std::string> body_promise;
+	auto future = body_promise.get_future();
+
+	// Shared client to keep alive
+	auto cli = std::make_shared<httplib::Client>(host.c_str());
+
+	// Capture both client and promise
+	std::thread([cli, path, promise = std::move(body_promise)]() mutable {
+		auto res = cli->Get(path.c_str());
+		if (res && res->status == 200) {
+			promise.set_value(res->body);
+		}
+		else {
+			throw std::runtime_error("Connection failed.\nHTTP status: " + std::to_string(res->status) + "Error: " + httplib::to_string(res.error()));
+			promise.set_value("");
+		}
+		}).detach();
+
+	return future;
+}
 #else
 string LoadUpdateString()
 {
-	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION};
+	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + VER_FILEVERSION_STR};
 	HINTERNET connect = InternetOpen(AGENT.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if (!connect) {
 		throw error{ string {"Connection failed to verify the plugin version. Error: " + to_string(GetLastError()) } };
@@ -87,7 +111,7 @@ string LoadWebSquawkO(CCAMS& ccams, CFlightPlan& FlightPlan)
 		query_string += "&codes=" + codes;
 	}
 	httplib::Headers headers = {
-		{"User-Agent", "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION}
+		{"User-Agent", "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + VER_FILEVERSION_STR}
 	};
 
 	httplib::Client client(MY_PLUGIN_APP_BASE);
@@ -146,7 +170,7 @@ string LoadWebSquawk(const CFlightPlan& FlightPlan, const CController& ATCO, vec
 		query_string += "&codes=" + codes;
 	}
 	httplib::Headers headers = {
-		{"User-Agent", "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION}
+		{"User-Agent", "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + VER_FILEVERSION_STR}
 	};
 
 	httplib::Client client(MY_PLUGIN_APP_BASE);
@@ -168,8 +192,8 @@ string LoadWebSquawk(const CFlightPlan& FlightPlan, const CController& ATCO, vec
 string LoadWebSquawk(CCAMS& ccams, CFlightPlan& FlightPlan)
 {
 	//PluginData p;
-	//const string AGENT{ "EuroScope " + string { MY_PLUGIN_NAME } + "/" + string { MY_PLUGIN_VERSION } };
-	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + MY_PLUGIN_VERSION};
+	//const string AGENT{ "EuroScope " + string { MY_PLUGIN_NAME } + "/" + string { VER_FILEVERSION_STR } };
+	const string AGENT{ "EuroScope " + (string)EuroScopeVersion() + " plug-in: " + MY_PLUGIN_NAME + "/" + VER_FILEVERSION_STR};
 	HINTERNET connect = InternetOpen(AGENT.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if (!connect) {
 #ifdef _DEBUG
@@ -302,12 +326,42 @@ std::vector<int> GetExeVersion() {
 	return {}; // Return an empty vector if no version info is available
 }
 
+std::vector<int> parseVersion(const std::string& version) {
+    std::vector<int> parts;
+    std::stringstream ss(version);
+    std::string item;
+
+    while (std::getline(ss, item, ',')) {
+        parts.push_back(std::stoi(item));
+    }
+
+    // Ensure the version has exactly 4 parts
+    while (parts.size() < 4) {
+        parts.push_back(0);
+    }
+
+    return parts;
+}
+
+int compareVersions(const std::vector<int>& v1, const std::vector<int>& v2) {
+	for (size_t i = 0; i < 4; ++i) {
+		if (v1[i] < v2[i]) return -1;
+		if (v1[i] > v2[i]) return 1;
+	}
+	return 0; // equal
+}
+
 string EuroScopeVersion()
 {
-	std::vector<int> version = GetExeVersion();
-	if (!version.empty())
+	vector<int> version = GetExeVersion();
+	if (version.size() > 3)
 		return to_string(version[0]) + "." + to_string(version[1]) + "." + to_string(version[2]) + "." + to_string(version[3]);
 
 	return "{NO VERSION DATA}";
 }
 
+string GetCompiledVersion() {
+	ostringstream ss;
+	ss << VER_MAJOR << "." << VER_MINOR << "." << VER_PATCH << "." << VER_BUILD;
+	return ss.str();
+}

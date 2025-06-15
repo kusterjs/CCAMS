@@ -28,9 +28,14 @@ string LoadWebSquawkO(CCAMS& ccams, CFlightPlan& FlightPlan);
 
 string LoadWebSquawk(const CFlightPlan& FlightPlan, const CController& ATCO, vector<string> usedCodes, bool vicinityADEP, const int ConnectionType);
 string LoadUpdateString();
+std::future<std::string> async_http_get(const std::string& host, const std::string& path);
 
 vector<int> GetExeVersion();
+std::vector<int> parseVersion(const std::string& version);
+int compareVersions(const std::vector<int>& v1, const std::vector<int>& v2);
+
 string EuroScopeVersion();
+string GetCompiledVersion();
 
 inline vector<string> split(const string & s, char delim)
 {
