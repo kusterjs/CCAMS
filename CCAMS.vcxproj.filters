@@ -47,6 +47,12 @@
     <ClInclude Include="lib\EuroScopePlugIn.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="config.txt">
@@ -66,5 +72,19 @@
     <None Include="README.md">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="generate_version_files.py">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="version_latest.json">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="version_minimum.json">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CCAMS.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

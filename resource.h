@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by ModeS.rc
+// Used by CCAMS.rc
 
 // Next default values for new objects
 // 
