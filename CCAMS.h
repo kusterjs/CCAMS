@@ -110,6 +110,8 @@ private:
 	future<string> fVersion;
 	future<string> fConfig;
 	vector<string> ProcessedFlightPlans;
+	vector<string> PendingSquawkRequests;
+	map<const char*, future<string>> PendingSquawks;
 	regex ModeSAirports;
 	regex ModeSAirportsExcl;
 	regex ModeSRoute;
@@ -122,6 +124,7 @@ private:
 	const char* squawkModeS;
 	const char* squawkVFR;
 	int ConnectionState;
+	int RemoteConnectionState;
 	bool pluginVersionCheck;
 	bool acceptEquipmentICAO;
 	bool acceptEquipmentFAA;
@@ -133,6 +136,7 @@ private:
 	void AssignAutoSquawk(CFlightPlan& FlightPlan);
 	void AssignSquawk(CFlightPlan& FlightPlan);
 	void AssignPendingSquawks();
+	void RequestSquawks();
 	void CheckVersion(future<string> & message);
 	void LoadConfig(future<string>& message);
 	void ReadSettings();
@@ -151,7 +155,6 @@ private:
 	bool HasDuplicateSquawk(const CRadarTarget& RadarTarget);
 	bool HasDuplicatePSSR(const CFlightPlan& FlightPlan);
 
-	map<const char*, future<string>> PendingSquawks;
 
 #ifdef _DEBUG
 	void writeLogFile(stringstream& sText);

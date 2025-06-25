@@ -53,6 +53,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc, const ModeS&& ms
 
 	// Set default setting values
 	ConnectionState = 0;
+	RemoteConnectionState = 0;
 	pluginVersionCheck = false;
 	acceptEquipmentICAO = true;
 	acceptEquipmentFAA = true;
@@ -525,9 +526,9 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 	case ItemCodes::TAG_FUNC_ASSIGN_SQUAWK_DISCRETE:
 		try
 		{
-			if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
+			if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FlightPlan.GetCallsign()) == PendingSquawkRequests.end())
 			{
-				PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
+				PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
 				if (GetConnectionType() == 4)
 				{
@@ -571,10 +572,15 @@ void CCAMS::OnTimer(int Counter)
 		LoadConfig(fConfig);
 
 	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && GetConnectionType() > 0)
-		if (GetConnectionType() != 4 || ConnectionState != 4) ConnectionState++;
+		if (GetConnectionType() != 4 || ConnectionState != 4)
+		{
+			ConnectionState++;
+			RemoteConnectionState++;
+		}
 	else if (GetConnectionType() != ConnectionState)
 	{
 		ConnectionState = 0;
+		RemoteConnectionState = 0;
 		if (ProcessedFlightPlans.size() > 0)
 		{
 			ProcessedFlightPlans.clear();
@@ -596,6 +602,7 @@ void CCAMS::OnTimer(int Counter)
 #endif // _DEBUG
 	{
 		AssignPendingSquawks();
+		RequestSquawks();
 
 		if (autoAssign == 0 || !pluginVersionCheck || ControllerMyself().GetRating() < 2 || (ControllerMyself().GetFacility() > 1 && ControllerMyself().GetFacility() < 5))
 			return;
@@ -707,8 +714,8 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 						if (_stricmp(FP.GetCorrelatedRadarTarget().GetPosition().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0)
 							break;
 
-					if (PendingSquawks.find(FP.GetCallsign()) == PendingSquawks.end())
-						PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, FP, ControllerMyself(), collectUsedCodes(FP), IsADEPvicinity(FP), GetConnectionType())));
+					if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FP.GetCallsign()) == PendingSquawkRequests.end())
+						PendingSquawkRequests.push_back(FP.GetCallsign());
 #ifdef _DEBUG
 					log << FP.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
 					writeLogFile(log);
@@ -805,9 +812,9 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 	}
-	else if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
+	else if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FlightPlan.GetCallsign()) == PendingSquawkRequests.end())
 	{
-		PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
+		PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
 		log << FlightPlan.GetCallsign() << ":FP processed:unique code AUTO assigned";
 		writeLogFile(log);
@@ -821,16 +828,19 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 
 void CCAMS::AssignSquawk(CFlightPlan& FlightPlan)
 {
-	future<string> webSquawk = std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
+	if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FlightPlan.GetCallsign()) == PendingSquawkRequests.end())
+		PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
 
-	if (webSquawk.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-	{
-		string squawk = webSquawk.get();
-		if (!FlightPlanSelect(FlightPlan.GetCallsign()).GetControllerAssignedData().SetSquawk(squawk.c_str()))
-		{
-			PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
-		}
-	}
+	//future<string> webSquawk = std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
+
+	//if (webSquawk.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+	//{
+	//	string squawk = webSquawk.get();
+	//	if (!FlightPlanSelect(FlightPlan.GetCallsign()).GetControllerAssignedData().SetSquawk(squawk.c_str()))
+	//	{
+	//		PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
+	//	}
+	//}
 }
 
 void CCAMS::AssignPendingSquawks()
@@ -855,6 +865,10 @@ void CCAMS::AssignPendingSquawks()
 				string DisplayMsg{ "Your request for a squawk from the centralised code server failed. Check your plugin version, try again or revert to the ES built-in functionalities for assigning a squawk (F9)." };
 				DisplayUserMessage(MY_PLUGIN_NAME, "Error", DisplayMsg.c_str(), true, true, false, false, false);
 				DisplayUserMessage(MY_PLUGIN_NAME, "Error", ("For troubleshooting, report error code '" + squawk + "'").c_str(), true, true, false, false, false);
+
+				RemoteConnectionState = -10;
+				DisplayMsg = { "Request for squawks from the centralised code server are temporarily paused. Operations will resume automatically in 20 seconds." };
+				DisplayUserMessage(MY_PLUGIN_NAME, "Error", DisplayMsg.c_str(), true, true, false, false, false);
 			}
 			else
 			{
@@ -864,12 +878,28 @@ void CCAMS::AssignPendingSquawks()
 #endif
 			}
 			it = PendingSquawks.erase(it);
-			break;	// exit function after one successful assignment to avoid an overload of requests being sent out simultaneously
 		}
 		else
 		{
 			it++;
 		}
+	}
+}
+
+void CCAMS::RequestSquawks()
+{
+	string DisplayMsg;
+	CFlightPlan FlightPlan;
+
+	if (RemoteConnectionState < 10)
+		return;
+
+	for (auto& sCallsign : PendingSquawkRequests)
+	{
+		FlightPlan = FlightPlanSelect(sCallsign.c_str());
+		PendingSquawks.insert(std::make_pair(sCallsign.c_str(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
+		PendingSquawkRequests.erase(remove(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FlightPlan.GetCallsign()), PendingSquawkRequests.end());
+		break;	// exit function after one successful assignment to avoid an overload of requests being sent out simultaneously
 	}
 }
 
