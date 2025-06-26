@@ -1241,9 +1241,9 @@ bool CCAMS::HasDuplicateSquawk(const CFlightPlan& FlightPlan)
 
 	if (strlen(assr) == 4)
 	{
-		if (strcmp(FlightPlan.GetFlightPlanData().GetPlanType(), "V") == 0)
+		if (atoi(assr) % 100 == 0)
 			return false;
-		else if (strcmp(FlightPlan.GetControllerAssignedData().GetSquawk(), squawkModeS) == 0)
+		else if (strcmp(FlightPlan.GetFlightPlanData().GetPlanType(), "V") == 0)
 			return false;
 
 		// searching for duplicate assignments in radar targets
