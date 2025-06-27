@@ -110,7 +110,7 @@ private:
 	future<string> fVersion;
 	future<string> fConfig;
 	vector<string> ProcessedFlightPlans;
-	vector<string> PendingSquawkRequests;
+	vector<const char*> PendingSquawkRequests;
 	map<const char*, future<string>> PendingSquawks;
 	regex ModeSAirports;
 	regex ModeSAirportsExcl;
