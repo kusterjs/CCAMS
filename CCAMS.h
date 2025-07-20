@@ -23,6 +23,7 @@ using namespace EuroScopePlugIn;
 #define MY_PLUGIN_DEVELOPER			"Jonas Kuster, Pierre Ferran, Oliver Grützmann"
 #define MY_PLUGIN_COPYRIGHT			"GPL v3"
 //#define MY_PLUGIN_VIEW      "Standard ES radar screen"
+#define CLR_INVALID ((COLORREF)-1)
 
 struct ItemCodes
 {
@@ -129,6 +130,7 @@ private:
 	bool acceptEquipmentICAO;
 	bool acceptEquipmentFAA;
 	bool updateOnStartTracking;
+	COLORREF tagColour;
 	int autoAssign;
 	int APTcodeMaxGS;
 	int APTcodeMaxDist;

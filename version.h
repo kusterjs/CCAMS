@@ -1,6 +1,6 @@
 #define VER_MAJOR 2
 #define VER_MINOR 5
 #define VER_PATCH 2
-#define VER_BUILD 5
-#define VER_FILEVERSION 2,5,2,5
+#define VER_BUILD 14
+#define VER_FILEVERSION 2,5,2,14
 #define VER_FILEVERSION_STR "2.5.2\0"

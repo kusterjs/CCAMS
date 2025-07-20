@@ -64,6 +64,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc, const ModeS&& ms
 #endif
 	APTcodeMaxGS = 50;
 	APTcodeMaxDist = 3;
+	tagColour = CLR_INVALID;
 	
 	ReadSettings();
 }
@@ -297,6 +298,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 
 		if (ItemCode == ItemCodes::TAG_ITEM_EHS_HDG)
 		{
+			if (tagColour != CLR_INVALID) 
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (IsEHS(FlightPlan))
 			{
 				sprintf_s(sItemString, 16, "%03i°", RadarTarget.GetPosition().GetReportedHeading() % 360);
@@ -312,6 +318,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 		}
 		else if (ItemCode == ItemCodes::TAG_ITEM_EHS_ROLL)
 		{
+			if (tagColour != CLR_INVALID)
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (IsEHS(FlightPlan))
 			{
 				auto rollb = RadarTarget.GetPosition().GetReportedBank();
@@ -336,6 +347,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 		}
 		else if (ItemCode == ItemCodes::TAG_ITEM_EHS_GS)
 		{
+			if (tagColour != CLR_INVALID)
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (IsEHS(FlightPlan) && FlightPlan.GetCorrelatedRadarTarget().IsValid())
 			{
 				snprintf(sItemString, 16, "%03i", RadarTarget.GetPosition().GetReportedGS());
@@ -349,7 +365,6 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 				strcpy_s(sItemString, 16, "N/A");
 			}
 		}
-
 		else if (ItemCode == ItemCodes::TAG_ITEM_ERROR_MODES_USE)
 		{
 			if (IsEligibleSquawkModeS(FlightPlan)) return;
@@ -386,6 +401,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 		}
 		else if (ItemCode == ItemCodes::TAG_ITEM_EHS_PINNED)
 		{
+			if (tagColour != CLR_INVALID)
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (std::find(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()) != EHSListFlightPlans.end())
 				strcpy_s(sItemString, 16, "¤");
 			else
@@ -1097,6 +1117,38 @@ void CCAMS::ReadSettings()
 			else if (stoi(cstrSetting) > 0)
 			{
 				autoAssign = stoi(cstrSetting);
+			}
+		}
+
+		cstrSetting = GetDataFromSettings("tagColour");
+		if (cstrSetting != NULL)
+		{
+			const char* hex = (cstrSetting[0] == '#') ? cstrSetting + 1 : cstrSetting;
+
+			if (std::strlen(hex) != 6)
+				DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' is not of the expected length of 6 characters.", true, true, true, true, false);
+			else
+			{
+				int r, g, b;
+				std::stringstream ss;
+
+				ss << std::hex << std::string(hex, 2);
+				if (!(ss >> r)) DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' has invalid characters (red).", true, true, true, true, false);
+				else
+				{
+					ss.clear(); ss.str(std::string(hex + 2, 2));
+					if (!(ss >> g)) DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' has invalid characters (green).", true, true, true, true, false);
+					else
+					{
+						ss.clear(); ss.str(std::string(hex + 4, 2));
+						if (!(ss >> b)) DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' has invalid characters (blue).", true, true, true, true, false);
+						else 
+						{
+							tagColour = RGB(r, g, b);
+							if (!(ss >> b)) DisplayUserMessage(MY_PLUGIN_NAME, "Initialisation", ("Tag colour RGB " + to_string(GetRValue(tagColour)) + ", " + to_string(GetGValue(tagColour)) + ", " + to_string(GetBValue(tagColour))).c_str(), true, true, true, true, false);
+						}
+					}
+				}
 			}
 		}
 	}
