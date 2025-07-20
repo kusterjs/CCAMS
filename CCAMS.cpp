@@ -986,6 +986,8 @@ void CCAMS::CheckVersion(future<string> & fmessage)
 				{
 					if (EuroScopeVersion[2] > 3)
 						DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope may provide unreliable aircraft equipment code information. Deactivate the automatic code assignment if Mode S equipped aircraft are not detected correctly.", true, true, false, true, false);
+					if (EuroScopeVersion[2] == 10)
+						DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope does not allow plug-ins to add/manage custom flight plan lists. The Mode S EHS list is therefore not available.", true, true, false, true, false);
 
 					pluginVersionCheck = true;
 				}
