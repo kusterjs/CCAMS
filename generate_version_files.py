@@ -12,6 +12,10 @@ major = version["major"]
 minor = version["minor"]
 patch = version["patch"]
 build = version["build"]
+version["build"] += 1
+
+with open("version_latest.json", "w") as f:
+    version = json.dump(version, f, indent=2)
 
 with open("version.h", "w") as f:
     f.write(f"#define VER_MAJOR {major}\n")

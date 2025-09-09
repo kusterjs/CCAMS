@@ -53,6 +53,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc, const ModeS&& ms
 
 	// Set default setting values
 	ConnectionState = 0;
+	RemoteConnectionState = 0;
 	pluginVersionCheck = false;
 	acceptEquipmentICAO = true;
 	acceptEquipmentFAA = true;
@@ -63,6 +64,7 @@ CCAMS::CCAMS(const EquipmentCodes&& ec, const SquawkCodes&& sc, const ModeS&& ms
 #endif
 	APTcodeMaxGS = 50;
 	APTcodeMaxDist = 3;
+	tagColour = CLR_INVALID;
 	
 	ReadSettings();
 }
@@ -296,6 +298,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 
 		if (ItemCode == ItemCodes::TAG_ITEM_EHS_HDG)
 		{
+			if (tagColour != CLR_INVALID) 
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (IsEHS(FlightPlan))
 			{
 				sprintf_s(sItemString, 16, "%03i°", RadarTarget.GetPosition().GetReportedHeading() % 360);
@@ -311,6 +318,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 		}
 		else if (ItemCode == ItemCodes::TAG_ITEM_EHS_ROLL)
 		{
+			if (tagColour != CLR_INVALID)
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (IsEHS(FlightPlan))
 			{
 				auto rollb = RadarTarget.GetPosition().GetReportedBank();
@@ -335,6 +347,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 		}
 		else if (ItemCode == ItemCodes::TAG_ITEM_EHS_GS)
 		{
+			if (tagColour != CLR_INVALID)
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (IsEHS(FlightPlan) && FlightPlan.GetCorrelatedRadarTarget().IsValid())
 			{
 				snprintf(sItemString, 16, "%03i", RadarTarget.GetPosition().GetReportedGS());
@@ -348,7 +365,6 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 				strcpy_s(sItemString, 16, "N/A");
 			}
 		}
-
 		else if (ItemCode == ItemCodes::TAG_ITEM_ERROR_MODES_USE)
 		{
 			if (IsEligibleSquawkModeS(FlightPlan)) return;
@@ -367,7 +383,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 			auto assr = RadarTarget.GetCorrelatedFlightPlan().GetControllerAssignedData().GetSquawk();
 			auto pssr = RadarTarget.GetPosition().GetSquawk();
 
-			if (!IsEligibleSquawkModeS(FlightPlan) && (strcmp(assr, squawkModeS) == 0 || (strcmp(pssr, squawkModeS) == 0 && strlen(assr) == 0)))
+			if (strcmp(pssr, "7500") == 0 || strcmp(pssr, "7600") == 0 || strcmp(pssr, "7700") == 0)
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_EMERGENCY;
+			}
+			else if (!IsEligibleSquawkModeS(FlightPlan) && (strcmp(assr, squawkModeS) == 0 || (strcmp(pssr, squawkModeS) == 0 && strlen(assr) == 0)))
 			{
 				// mode S code assigned, but not eligible
 				*pColorCode = EuroScopePlugIn::TAG_COLOR_REDUNDANT;
@@ -381,6 +401,11 @@ void CCAMS::OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int I
 		}
 		else if (ItemCode == ItemCodes::TAG_ITEM_EHS_PINNED)
 		{
+			if (tagColour != CLR_INVALID)
+			{
+				*pColorCode = EuroScopePlugIn::TAG_COLOR_RGB_DEFINED;
+				*pRGB = tagColour;
+			}
 			if (std::find(EHSListFlightPlans.begin(), EHSListFlightPlans.end(), FlightPlan.GetCallsign()) != EHSListFlightPlans.end())
 				strcpy_s(sItemString, 16, "¤");
 			else
@@ -525,9 +550,9 @@ void CCAMS::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RE
 	case ItemCodes::TAG_FUNC_ASSIGN_SQUAWK_DISCRETE:
 		try
 		{
-			if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
+			if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FlightPlan.GetCallsign()) == PendingSquawkRequests.end())
 			{
-				PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
+				PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
 				if (GetConnectionType() == 4)
 				{
@@ -571,10 +596,15 @@ void CCAMS::OnTimer(int Counter)
 		LoadConfig(fConfig);
 
 	if (ControllerMyself().IsValid() && ControllerMyself().IsController() && GetConnectionType() > 0)
-		if (GetConnectionType() != 4 || ConnectionState != 4) ConnectionState++;
+		if (GetConnectionType() != 4 || ConnectionState != 4)
+		{
+			ConnectionState++;
+			RemoteConnectionState++;
+		}
 	else if (GetConnectionType() != ConnectionState)
 	{
 		ConnectionState = 0;
+		RemoteConnectionState = 0;
 		if (ProcessedFlightPlans.size() > 0)
 		{
 			ProcessedFlightPlans.clear();
@@ -596,6 +626,7 @@ void CCAMS::OnTimer(int Counter)
 #endif // _DEBUG
 	{
 		AssignPendingSquawks();
+		if (GetConnectionType() <= 2 || Counter % 2 == 0) RequestSquawks();
 
 		if (autoAssign == 0 || !pluginVersionCheck || ControllerMyself().GetRating() < 2 || (ControllerMyself().GetFacility() > 1 && ControllerMyself().GetFacility() < 5))
 			return;
@@ -707,8 +738,8 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 						if (_stricmp(FP.GetCorrelatedRadarTarget().GetPosition().GetSquawk(), FlightPlan.GetControllerAssignedData().GetSquawk()) == 0)
 							break;
 
-					if (PendingSquawks.find(FP.GetCallsign()) == PendingSquawks.end())
-						PendingSquawks.insert(std::make_pair(FP.GetCallsign(), std::async(LoadWebSquawk, FP, ControllerMyself(), collectUsedCodes(FP), IsADEPvicinity(FP), GetConnectionType())));
+					if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FP.GetCallsign()) == PendingSquawkRequests.end())
+						PendingSquawkRequests.push_back(FP.GetCallsign());
 #ifdef _DEBUG
 					log << FP.GetCallsign() << ":duplicate assigned code:unique code AUTO assigned:" << FlightPlan.GetCallsign() << " already tracked by " << FlightPlan.GetTrackingControllerCallsign();
 					writeLogFile(log);
@@ -805,9 +836,9 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 		DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
 #endif
 	}
-	else if (PendingSquawks.find(FlightPlan.GetCallsign()) == PendingSquawks.end())
+	else if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FlightPlan.GetCallsign()) == PendingSquawkRequests.end())
 	{
-		PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
+		PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
 #ifdef _DEBUG
 		log << FlightPlan.GetCallsign() << ":FP processed:unique code AUTO assigned";
 		writeLogFile(log);
@@ -821,16 +852,19 @@ void CCAMS::AssignAutoSquawk(CFlightPlan& FlightPlan)
 
 void CCAMS::AssignSquawk(CFlightPlan& FlightPlan)
 {
-	future<string> webSquawk = std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
+	if (find(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), FlightPlan.GetCallsign()) == PendingSquawkRequests.end())
+		PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
 
-	if (webSquawk.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-	{
-		string squawk = webSquawk.get();
-		if (!FlightPlanSelect(FlightPlan.GetCallsign()).GetControllerAssignedData().SetSquawk(squawk.c_str()))
-		{
-			PendingSquawks.insert(std::make_pair(FlightPlan.GetCallsign(), std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
-		}
-	}
+	//future<string> webSquawk = std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType());
+
+	//if (webSquawk.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+	//{
+	//	string squawk = webSquawk.get();
+	//	if (!FlightPlanSelect(FlightPlan.GetCallsign()).GetControllerAssignedData().SetSquawk(squawk.c_str()))
+	//	{
+	//		PendingSquawkRequests.push_back(FlightPlan.GetCallsign());
+	//	}
+	//}
 }
 
 void CCAMS::AssignPendingSquawks()
@@ -852,9 +886,13 @@ void CCAMS::AssignPendingSquawks()
 			}
 			else if (!FlightPlanSelect(it->first).GetControllerAssignedData().SetSquawk(squawk.c_str()))
 			{
-				string DisplayMsg{ "Your request for a squawk from the centralised code server failed. Check your plugin version, try again or revert to the ES built-in functionalities for assigning a squawk (F9)." };
+				DisplayMsg = { "Your request for a squawk from the centralised code server failed. Check your plugin version, try again or revert to the ES built-in functionalities for assigning a squawk (F9)." };
 				DisplayUserMessage(MY_PLUGIN_NAME, "Error", DisplayMsg.c_str(), true, true, false, false, false);
 				DisplayUserMessage(MY_PLUGIN_NAME, "Error", ("For troubleshooting, report error code '" + squawk + "'").c_str(), true, true, false, false, false);
+
+				RemoteConnectionState = -10;
+				DisplayMsg = { "Request for squawks from the centralised code server are temporarily paused. Operations will resume automatically in 20 seconds." };
+				DisplayUserMessage(MY_PLUGIN_NAME, "Error", DisplayMsg.c_str(), true, true, false, false, false);
 			}
 			else
 			{
@@ -864,11 +902,45 @@ void CCAMS::AssignPendingSquawks()
 #endif
 			}
 			it = PendingSquawks.erase(it);
-			break;	// exit function after one successful assignment to avoid an overload of requests being sent out simultaneously
 		}
 		else
 		{
 			it++;
+		}
+	}
+}
+
+void CCAMS::RequestSquawks()
+{
+	string DisplayMsg;
+	CFlightPlan FlightPlan;
+
+	if (RemoteConnectionState < 10)
+		return;
+	if (GetConnectionType() > 2 && !PendingSquawks.empty())
+		return;	// ensure the last answer has been reveived when using simulator sessions only, because the received squawk needs to be assigned to a flight plan first, so that it is part of the used codes for the next request. For live requests, this is not necessary as the code will be reserved on the server.
+
+	for (auto sCallsign = PendingSquawkRequests.begin(); sCallsign != PendingSquawkRequests.end(); )
+	{
+		DisplayMsg = { "Pending squawk for " + (string)*sCallsign };
+		//DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+
+		FlightPlan = FlightPlanSelect(*sCallsign);
+		//PendingSquawkRequests.erase(remove(PendingSquawkRequests.begin(), PendingSquawkRequests.end(), sCallsign), PendingSquawkRequests.end());
+		if (FlightPlan.IsValid())
+		{
+#ifdef _DEBUG
+			DisplayMsg = { "Initiating squawk request for " + (string)*sCallsign };
+			DisplayUserMessage(MY_PLUGIN_NAME, "Debug", DisplayMsg.c_str(), true, false, false, false, false);
+#endif
+			PendingSquawks.insert(std::make_pair(*sCallsign, std::async(LoadWebSquawk, FlightPlan, ControllerMyself(), collectUsedCodes(FlightPlan), IsADEPvicinity(FlightPlan), GetConnectionType())));
+			sCallsign = PendingSquawkRequests.erase(sCallsign);
+
+			break;	// exit function after one successful assignment to avoid an overload of requests being sent out simultaneously
+		}
+		else
+		{
+			sCallsign = PendingSquawkRequests.erase(sCallsign);
 		}
 	}
 }
@@ -914,6 +986,8 @@ void CCAMS::CheckVersion(future<string> & fmessage)
 				{
 					if (EuroScopeVersion[2] > 3)
 						DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope may provide unreliable aircraft equipment code information. Deactivate the automatic code assignment if Mode S equipped aircraft are not detected correctly.", true, true, false, true, false);
+					if (EuroScopeVersion[2] == 10)
+						DisplayUserMessage(MY_PLUGIN_NAME, "Compatibility Check", "Your version of EuroScope does not allow plug-ins to add/manage custom flight plan lists. The Mode S EHS list is therefore not available.", true, true, false, true, false);
 
 					pluginVersionCheck = true;
 				}
@@ -1045,6 +1119,38 @@ void CCAMS::ReadSettings()
 			else if (stoi(cstrSetting) > 0)
 			{
 				autoAssign = stoi(cstrSetting);
+			}
+		}
+
+		cstrSetting = GetDataFromSettings("tagColour");
+		if (cstrSetting != NULL)
+		{
+			const char* hex = (cstrSetting[0] == '#') ? cstrSetting + 1 : cstrSetting;
+
+			if (std::strlen(hex) != 6)
+				DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' is not of the expected length of 6 characters.", true, true, true, true, false);
+			else
+			{
+				int r, g, b;
+				std::stringstream ss;
+
+				ss << std::hex << std::string(hex, 2);
+				if (!(ss >> r)) DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' has invalid characters (red).", true, true, true, true, false);
+				else
+				{
+					ss.clear(); ss.str(std::string(hex + 2, 2));
+					if (!(ss >> g)) DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' has invalid characters (green).", true, true, true, true, false);
+					else
+					{
+						ss.clear(); ss.str(std::string(hex + 4, 2));
+						if (!(ss >> b)) DisplayUserMessage(MY_PLUGIN_NAME, "Plugin Settings Error", "The setting 'tagColour' has invalid characters (blue).", true, true, true, true, false);
+						else 
+						{
+							tagColour = RGB(r, g, b);
+							if (!(ss >> b)) DisplayUserMessage(MY_PLUGIN_NAME, "Initialisation", ("Tag colour RGB " + to_string(GetRValue(tagColour)) + ", " + to_string(GetGValue(tagColour)) + ", " + to_string(GetBValue(tagColour))).c_str(), true, true, true, true, false);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -1211,6 +1317,11 @@ bool CCAMS::HasDuplicateSquawk(const CFlightPlan& FlightPlan)
 
 	if (strlen(assr) == 4)
 	{
+		if (atoi(assr) % 100 == 0)
+			return false;
+		else if (strcmp(FlightPlan.GetFlightPlanData().GetPlanType(), "V") == 0)
+			return false;
+
 		// searching for duplicate assignments in radar targets
 		for (CRadarTarget RT = RadarTargetSelectFirst(); RT.IsValid();
 			RT = RadarTargetSelectNext(RT))

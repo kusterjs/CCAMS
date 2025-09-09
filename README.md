@@ -86,6 +86,7 @@ The Plug-in settings file (check the file location via EuroScope > other setting
 * ```acceptFPLformatICAO```: to allow/ignore Mode S capabilities of flight plans with the equipment code specified according ICAO format (default ```1```)
 * ```acceptFPLformatFAA```: to allow/ignore Mode S capabilities of flight plans with the equipment code specified according FAA format (default ```1```)
 * ```AutoAssign```: the refresh rate (in seconds) to search and perform automatic transponder code assignment of IFR airborne aircraft (default setting ```10```, deactivate with ```0```)
+* ```tagColour```: a custom colour for the Mode S EHS list items as hex value (the colour of the default tag items like the call sign needs to be changed in the tag editor), default tag colour will be used if no value is set
 
 If you operate in a region not equipped for transponder code ```1000``` or just do not wish to assign any transponder code ```1000```, set both ```acceptFPLformatICAO``` and ```acceptFPLformatFAA``` to ```0```. This will result in the plugin using discrete transponder codes only.
 
