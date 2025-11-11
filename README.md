@@ -28,7 +28,7 @@ The plugin sends requests to the server acting as the central interface to manag
 * Update your tag and list definitions and replace the EuroScope default tag items and functions by the ones of the plugin
 
 All airports starting with one of the following combination of letters are considered Mode S capable:
-```EB,ED,EH,EL,EP,ET,LD,LF,LH,LI,LK,LO,LR,LSZR,LSZB,LSZG,LSGC,LSZH,LSGG,LZ```, excluding ```EPCE,EPDA,EPDE,EPIR,EPKS,EPLK,EPLY,EPMB,EPMI,EPMM,EPOK,EPPR,EPPW,EPSN,EPTM```
+```EB,ED,EH,EL,EP,ET,LBSR,LBSF,LBBG,LBWN,LD,LF,LH,LI,LK,LO,LR,LSGC,LSGG,LSZB,LSZG,LSZH,LSZR,LZ```, excluding ```EPCE,EPDA,EPDE,EPIR,EPKS,EPLK,EPLY,EPMB,EPMI,EPMM,EPOK,EPPR,EPPW,EPSN,EPTM```
 
 ## Compatibility
 
