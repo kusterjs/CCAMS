@@ -81,6 +81,9 @@
     <None Include="version_minimum.json">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include=".git\workflows\trigger-modes-server-update.yml">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CCAMS.rc">
