@@ -3,7 +3,7 @@ name: Trigger Mode S Database Update
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   dispatch:
