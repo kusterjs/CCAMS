@@ -81,7 +81,7 @@
     <None Include="version_minimum.json">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include=".git\workflows\trigger-modes-server-update.yml">
+    <None Include=".github\workflows\trigger-modes-server-update.yml">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

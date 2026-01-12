@@ -205,7 +205,7 @@
     <Text Include="version.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".git\workflows\trigger-modes-server-update.yml" />
+    <None Include=".github\workflows\trigger-modes-server-update.yml" />
     <None Include="README.md" />
     <None Include="generate_version_files.py" />
     <None Include="version_latest.json" />
