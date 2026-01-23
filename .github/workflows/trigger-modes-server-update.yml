@@ -16,7 +16,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/kusterjs/CCAMS-server/dispatches \
             -d '{
-              "event_type": "trigger-modes-data-update",
+              "event_type": "dispatch-ccams-config",
               "client_payload": {
                 "source_repo": "'"${{ github.repository }}"'",
                 "ref": "'"${{ github.ref }}"'",
